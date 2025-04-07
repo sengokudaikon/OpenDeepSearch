@@ -1,4 +1,6 @@
 # 🔍OpenDeepSearch: Democratizing Search with Open-source Reasoning Models and Reasoning Agents 🚀
+> **Note:** This repository is a fork of [sentient-agi/OpenDeepSearch](https://github.com/sentient-agi/OpenDeepSearch).
+
 
 <!-- markdownlint-disable first-line-h1 -->
 <!-- markdownlint-disable html -->
@@ -66,6 +68,7 @@ OpenDeepSearch is a lightweight yet powerful search tool designed for seamless i
   - [Acknowledgments 💡](#acknowledgments-)
   - [Citation](#citation)
   - [Contact 📩](#contact-)
+  - [MCP Server 🔌](#mcp-server-)
 
 ## Features ✨
 
@@ -143,17 +146,26 @@ PDM offers several advantages:
      - OpenAI
      - Anthropic
      - Google (Gemini)
+     - Microsoft Azure OpenAI
      - OpenRouter
+     - Fireworks AI
+     - DeepSeek
      - HuggingFace
-     - Fireworks
-     - And many more!
+     - And many more! See the full [LiteLLM supported providers list](https://docs.litellm.ai/docs/providers/).
    - Set your chosen provider's API key as an environment variable:
    ```bash
-   export <PROVIDER>_API_KEY='your-api-key-here'  # e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY
+   export <PROVIDER>_API_KEY='your-api-key-here'  # e.g., OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, AZURE_API_KEY, DEEPSEEK_API_KEY
    ```
-   - For OpenAI, you can also set a custom base URL (useful for self-hosted endpoints or proxies):
+   - For specific providers like Azure, additional variables are needed (LiteLLM automatically detects these):
    ```bash
-   export OPENAI_BASE_URL='https://your-custom-openai-endpoint.com'
+   export AZURE_API_BASE='https://your-resource-name.openai.azure.com/'
+   export AZURE_API_VERSION='2024-02-01' # Or your specific API version
+   # AZURE_DEPLOYMENT_ID is often passed via the model name, e.g., "azure/your-deployment-id"
+   ```
+   - For OpenAI-compatible endpoints (like self-hosted models), you can set:
+   ```bash
+   export OPENAI_API_KEY='your_api_key_if_needed'
+   export OPENAI_BASE_URL='https://your-custom-endpoint.com/v1' # Note the /v1 suffix usually required
    ```
    - You can set default LiteLLM model IDs for different tasks:
    ```bash
@@ -167,7 +179,7 @@ PDM offers several advantages:
    ```
    - When initializing OpenDeepSearch, you can specify your chosen model using the provider's format (this will override the environment variables):
    ```python
-   search_agent = OpenDeepSearchTool(model_name="provider/model-name")  # e.g., "anthropic/claude-3-opus-20240229", 'huggingface/microsoft/codebert-base', 'openrouter/google/gemini-2.0-flash-001'
+   search_agent = OpenDeepSearchTool(model="provider/model-name") # e.g., "gemini/gemini-pro", "azure/your-deployment-id", "deepseek/deepseek-chat"
    ```
 
 ## Usage ️
@@ -379,3 +391,9 @@ If you use `OpenDeepSearch` in your works, please cite it using the following Bi
 ## Contact 📩
 
 For questions or collaborations, open an issue or reach out to the maintainers.
+
+## MCP Server 🔌
+
+This project includes a Model Context Protocol (MCP) server located in the `mcp_server/` directory. This server allows compatible clients (like Smithery, Claude Desktop, etc.) to interact with OpenDeepSearch programmatically.
+
+For detailed setup and configuration instructions for the MCP server, please refer to its dedicated README: [`mcp_server/README.md`](./mcp_server/README.md).
