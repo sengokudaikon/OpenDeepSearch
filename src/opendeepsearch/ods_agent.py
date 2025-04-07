@@ -1,5 +1,5 @@
 from typing import Optional, Dict, Any, Literal
-from opendeepsearch.serp_search.serp_search import create_search_api, SearchAPI
+from opendeepsearch.serp_search.serp_search import create_search_api
 from opendeepsearch.context_building.process_sources_pro import SourceProcessor
 from opendeepsearch.context_building.build_context import build_context
 from litellm import completion, utils
@@ -13,16 +13,16 @@ load_dotenv()
 class OpenDeepSearchAgent:
     def __init__(
         self,
-        model: Optional[str] = None, #We use LiteLLM to call the model
+        model: Optional[str] = None,
         system_prompt: Optional[str] = SEARCH_SYSTEM_PROMPT,
         search_provider: Literal["serper", "searxng"] = "serper",
         serper_api_key: Optional[str] = None,
         searxng_instance_url: Optional[str] = None,
         searxng_api_key: Optional[str] = None,
         source_processor_config: Optional[Dict[str, Any]] = None,
-        temperature: float = 0.2, # Slight variation while maintaining reliability
-        top_p: float = 0.3, # Focus on high-confidence tokens
-        reranker: Optional[str] = "None", # Optional reranker identifier
+        temperature: float = 0.2,
+        top_p: float = 0.3,
+        reranker: Optional[str] = "None",
     ):
         """
         Initialize an OpenDeepSearch agent that combines web search, content processing, and LLM capabilities.
@@ -52,7 +52,6 @@ class OpenDeepSearchAgent:
             reranker (str, optional): Identifier for the reranker to use. If not provided,
                 uses the default reranker from SourceProcessor.
         """
-        # Initialize search API based on provider
         self.serp_search = create_search_api(
             search_provider=search_provider,
             serper_api_key=serper_api_key,
@@ -60,22 +59,18 @@ class OpenDeepSearchAgent:
             searxng_api_key=searxng_api_key
         )
 
-        # Update source_processor_config with reranker if provided
         if source_processor_config is None:
             source_processor_config = {}
         if reranker:
             source_processor_config['reranker'] = reranker
 
-        # Initialize SourceProcessor with provided config or defaults
         self.source_processor = SourceProcessor(**source_processor_config)
 
-        # Initialize LLM settings
         self.model = model if model is not None else os.getenv("LITELLM_SEARCH_MODEL_ID", os.getenv("LITELLM_MODEL_ID", "openrouter/google/gemini-2.0-flash-001"))
         self.temperature = temperature
         self.top_p = top_p
         self.system_prompt = system_prompt
 
-        # Configure LiteLLM with OpenAI base URL if provided
         openai_base_url = os.environ.get("OPENAI_BASE_URL")
         if openai_base_url:
             utils.set_provider_config("openai", {"base_url": openai_base_url})
@@ -85,12 +80,12 @@ class OpenDeepSearchAgent:
         query: str,
         max_sources: int = 2,
         pro_mode: bool = False
-    ) -> str:
+    ) -> tuple[str, list[dict[str, Any]]]:
         """
-        Performs a web search and builds a context from the search results.
+        Performs a web search, processes sources, and builds context.
 
         This method executes a search query, processes the returned sources, and builds a
-        consolidated context, inspired by FreshPrompt in the FreshLLMs paper, that can be used for answering questions.
+        consolidated context string, inspired by FreshPrompt in the FreshLLMs paper, that can be used for answering questions. It also returns the list of processed source dictionaries.
 
         Args:
             query (str): The search query to execute.
@@ -101,12 +96,12 @@ class OpenDeepSearchAgent:
                 thorough content processing.
 
         Returns:
-            str: A formatted context string built from the processed search results.
+            tuple[str, list[dict[str, Any]]]: A tuple containing:
+                - The formatted context string.
+                - A list of dictionaries, each representing a processed source.
         """
-        # Get sources from SERP
         sources = self.serp_search.get_sources(query)
 
-        # Process sources
         processed_sources = await self.source_processor.process_sources(
             sources,
             max_sources,
@@ -114,21 +109,22 @@ class OpenDeepSearchAgent:
             pro_mode
         )
 
-        # Build and return context
-        return build_context(processed_sources)
+        context_string = build_context(processed_sources)
+
+        return context_string, processed_sources
 
     async def ask(
         self,
         query: str,
         max_sources: int = 2,
         pro_mode: bool = False,
-    ) -> str:
+    ) -> dict[str, Any]:
         """
-        Searches for information and generates an AI response to the query.
+        Searches for information, generates an AI response, and returns sources.
 
-        This method combines web search, context building, and AI completion to provide
-        informed answers to questions. It first gathers relevant information through search,
-        then uses an LLM to generate a response based on the collected context.
+        This method combines web search, context building, and AI completion. It gathers
+        information, uses an LLM to generate a response based on the context, and returns
+        both the answer and the list of processed sources used.
 
         Args:
             query (str): The question or query to answer.
@@ -137,16 +133,17 @@ class OpenDeepSearchAgent:
                 and analysis of sources.
 
         Returns:
-            str: An AI-generated response that answers the query based on the gathered context.
+            dict[str, Any]: A dictionary containing:
+                - "answer" (str): The AI-generated response.
+                - "sources" (list[dict[str, Any]]): The list of processed sources.
         """
-        # Get context from search results
-        context = await self.search_and_build_context(query, max_sources, pro_mode)
-        # Prepare messages for the LLM
+        context, sources = await self.search_and_build_context(query, max_sources, pro_mode)
+
         messages = [
             {"role": "system", "content": self.system_prompt},
             {"role": "user", "content": f"Context:\n{context}\n\nQuestion: {query}"}
         ]
-        # Get completion from LLM
+
         response = completion(
             model=self.model,
             messages=messages,
@@ -154,16 +151,19 @@ class OpenDeepSearchAgent:
             top_p=self.top_p
         )
 
-        return response.choices[0].message.content
+        return {
+            "answer": response.choices[0].message.content,
+            "sources": sources
+        }
 
     def ask_sync(
         self,
         query: str,
         max_sources: int = 2,
         pro_mode: bool = False,
-    ) -> str:
+    ) -> dict[str, Any]:
         """
-        Synchronous version of ask() method.
+        Synchronous version of ask() method. Returns a dictionary with answer and sources.
         """
         try:
             # Try getting the current event loop
