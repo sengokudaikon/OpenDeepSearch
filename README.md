@@ -218,7 +218,7 @@ search_agent = OpenDeepSearchTool(
 
 if not search_agent.is_initialized:
     search_agent.setup()
-    
+
 query = "Fastest land animal?"
 result = search_agent.forward(query)
 print(result)
@@ -394,6 +394,6 @@ For questions or collaborations, open an issue or reach out to the maintainers.
 
 ## MCP Server 🔌
 
-This project includes a Model Context Protocol (MCP) server located in the `mcp_server/` directory. This server allows compatible clients (like Smithery, Claude Desktop, etc.) to interact with OpenDeepSearch programmatically.
+This project works with a Model Context Protocol (MCP) server located in the separate repository: [https://github.com/sengokudaikon/opendeepsearch_mcp](https://github.com/sengokudaikon/opendeepsearch_mcp). This server allows compatible clients (like Smithery, Claude Desktop, etc.) to interact with OpenDeepSearch programmatically.
 
-For detailed setup and configuration instructions for the MCP server, please refer to its dedicated README: [`mcp_server/README.md`](./mcp_server/README.md).
+For detailed setup and configuration instructions for the MCP server, please refer to its dedicated repository.
