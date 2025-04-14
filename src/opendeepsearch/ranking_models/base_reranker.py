@@ -107,7 +107,7 @@ class BaseSemanticSearcher(ABC):
         documents: List[str],
         top_k: int = 5,
         normalize: str = "softmax"
-    ) -> Union[List[str], List[List[str]]]:
+    ) -> str:
         """
         Returns only the reranked documents without scores.
         

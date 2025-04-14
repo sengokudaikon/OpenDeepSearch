@@ -1,6 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import Dict, Any, Optional, List, TypeVar, Generic, Union
+from typing import Dict, Any, Optional, List, TypeVar, Generic
 from abc import ABC, abstractmethod
 
 import requests

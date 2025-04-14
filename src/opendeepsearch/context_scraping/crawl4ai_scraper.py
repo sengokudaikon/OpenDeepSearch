@@ -4,8 +4,6 @@ Supports multiple extraction strategies including LLM, CSS, and XPath.
 """
 
 import asyncio
-import os
-from dataclasses import dataclass
 from typing import Dict, List, Optional
 
 from crawl4ai import AsyncWebCrawler, BrowserConfig, CrawlerRunConfig, CacheMode
@@ -19,7 +17,7 @@ from opendeepsearch.context_scraping.strategy_factory import StrategyFactory
 class WebScraper:
     """Unified scraper that encapsulates all extraction strategies and configuration"""
     def __init__(
-        self, 
+        self,
         browser_config: Optional[BrowserConfig] = None,
         strategies: List[str] = ['no_extraction'],
         llm_instruction: str = "Extract relevant content from the provided text, only return the text, no markdown formatting, remove all footnotes, citations, and other metadata and only keep the main content",
@@ -34,13 +32,13 @@ class WebScraper:
         self.llm_instruction = llm_instruction
         self.user_query = user_query
         self.filter_content = filter_content
-        
+
         # Validate strategies
         valid_strategies = {'markdown_llm', 'html_llm', 'fit_markdown_llm', 'css', 'xpath', 'no_extraction', 'cosine'}
         invalid_strategies = set(self.strategies) - valid_strategies
         if invalid_strategies:
             raise ValueError(f"Invalid strategies: {invalid_strategies}")
-            
+
         # Initialize strategy map
         self.strategy_map = {
             'markdown_llm': lambda: self.factory.create_llm_strategy('markdown', self.llm_instruction),
@@ -65,13 +63,13 @@ class WebScraper:
     async def scrape(self, url: str) -> Dict[str, ExtractionResult]:
         """
         Scrape URL using configured strategies
-        
+
         Args:
             url: Target URL to scrape
         """
         # Handle Wikipedia URLs
         if 'wikipedia.org/wiki/' in url:
-            from src.opendeepsearch.context_scraping.utils import get_wikipedia_content
+            from opendeepsearch.context_scraping.utils import get_wikipedia_content
             try:
                 content = get_wikipedia_content(url)
                 # Create same result for all strategies since we're using Wikipedia content
@@ -86,7 +84,7 @@ class WebScraper:
                 if self.debug:
                     print(f"Debug: Wikipedia extraction failed: {str(e)}")
                 # If Wikipedia extraction fails, fall through to normal scraping
-        
+
         # Normal scraping for non-Wikipedia URLs or if Wikipedia extraction failed
         results = {}
         for strategy_name in self.strategies:
@@ -96,16 +94,16 @@ class WebScraper:
             )
             result = await self.extract(config, url)
             results[strategy_name] = result
-            
+
         return results
-    
+
     async def scrape_many(self, urls: List[str]) -> Dict[str, Dict[str, ExtractionResult]]:
         """
         Scrape multiple URLs using configured strategies in parallel
-        
+
         Args:
             urls: List of target URLs to scrape
-            
+
         Returns:
             Dictionary mapping URLs to their extraction results
         """
@@ -113,12 +111,12 @@ class WebScraper:
         tasks = [self.scrape(url) for url in urls]
         # Run all tasks concurrently
         results_list = await asyncio.gather(*tasks)
-        
+
         # Build results dictionary
         results = {}
         for url, result in zip(urls, results_list):
             results[url] = result
-            
+
         return results
 
     async def extract(self, extraction_config: ExtractionConfig, url: str) -> ExtractionResult:
@@ -158,14 +156,14 @@ class WebScraper:
                             content = '\n'.join(item.get('content', '') for item in result.extracted_content)
                         else:
                             content = result.extracted_content
-                    
+
                     if self.filter_content and content:
-                        from src.opendeepsearch.context_scraping.utils import filter_quality_content
+                        from opendeepsearch.context_scraping.utils import filter_quality_content
                         content = filter_quality_content(content)
                 else:
                     content = result.extracted_content
                     if self.filter_content and content:
-                        from src.opendeepsearch.context_scraping.utils import filter_quality_content
+                        from opendeepsearch.context_scraping.utils import filter_quality_content
                         content = filter_quality_content(content)
 
             if self.debug:
@@ -177,7 +175,7 @@ class WebScraper:
                 content=content,
                 error=getattr(result, 'error', None)  # Capture error if available
             )
-            
+
             if result.success:
                 extraction_result.raw_markdown_length = len(result.markdown_v2.raw_markdown)
                 extraction_result.citations_markdown_length = len(result.markdown_v2.markdown_with_citations)
@@ -189,9 +187,9 @@ class WebScraper:
         except Exception as e:
             if self.debug:
                 import traceback
-                print(f"Debug: Exception occurred during extraction:")
+                print("Debug: Exception occurred during extraction:")
                 print(traceback.format_exc())
-            
+
             return ExtractionResult(
                 name=extraction_config.name,
                 success=False,
@@ -203,7 +201,7 @@ async def main():
     single_url = "https://example.com/product-page"
     scraper = WebScraper(debug=True)
     results = await scraper.scrape(single_url)
-    
+
     # Print single URL results
     for result in results.values():
         print_extraction_result(result)
@@ -214,9 +212,9 @@ async def main():
         "https://python.org",
         "https://github.com"
     ]
-    
+
     multi_results = await scraper.scrape_many(urls)
-    
+
     # Print multiple URL results
     for url, url_results in multi_results.items():
         print(f"\nResults for {url}:")

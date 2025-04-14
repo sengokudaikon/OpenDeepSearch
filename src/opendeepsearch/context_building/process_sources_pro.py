@@ -1,14 +1,26 @@
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, Dict, List, Tuple
 from opendeepsearch.context_scraping.crawl4ai_scraper import WebScraper
 from opendeepsearch.ranking_models.infinity_rerank import InfinitySemanticSearcher
 from opendeepsearch.ranking_models.jina_reranker import JinaReranker
 from opendeepsearch.ranking_models.chunker import Chunker
+from opendeepsearch.serp_search.serp_search import SearchResult
 
 @dataclass
 class Source:
     link: str
     html: str = ""
+
+
+def _get_valid_sources(sources: SearchResult[Dict[str, Any]], num_elements: int) -> List[Tuple[int, dict]]:
+    # Make sure sources.data['organic'] exists and is a list
+    if sources.data and 'organic' in sources.data:
+        organic_results = sources.data['organic']
+        if isinstance(organic_results, list):
+            return [(i, source) for i, source in enumerate(organic_results[:num_elements]) if source]
+    print("Warning: Could not extract valid sources from the search results")
+    return []
+
 
 class SourceProcessor:
     def __init__(
@@ -16,7 +28,7 @@ class SourceProcessor:
         top_results: int = 5,
         strategies: List[str] = ["no_extraction"],
         filter_content: bool = True,
-        reranker: str = "infinity"
+        reranker: str = "jina"
     ):
         self.strategies = strategies
         self.filter_content = filter_content
@@ -37,15 +49,19 @@ class SourceProcessor:
 
     async def process_sources(
         self,
-        sources: List[dict],
+        sources: SearchResult[Dict[str, Any]],
         num_elements: int,
         query: str,
         pro_mode: bool = False
-    ) -> List[dict]:
+    ) -> Dict[str, Any]:
         try:
-            valid_sources = self._get_valid_sources(sources, num_elements)
+            if not sources.data:
+                print("Warning: sources object does not have data")
+                return {}
+
+            valid_sources = _get_valid_sources(sources, num_elements)
             if not valid_sources:
-                return sources
+                return sources.data
 
             if not pro_mode:
                 # Check if there's a Wikipedia article among valid sources
@@ -60,10 +76,7 @@ class SourceProcessor:
             return self._update_sources_with_content(sources.data, valid_sources, html_contents, query)
         except Exception as e:
             print(f"Error in process_sources: {e}")
-            return sources
-
-    def _get_valid_sources(self, sources: List[dict], num_elements: int) -> List[Tuple[int, dict]]:
-        return [(i, source) for i, source in enumerate(sources.data['organic'][:num_elements]) if source]
+            return sources.data or {}
 
     async def _fetch_html_contents(self, links: List[str]) -> List[str]:
         raw_contents = await self.scraper.scrape_many(links)
@@ -91,11 +104,11 @@ class SourceProcessor:
 
     def _update_sources_with_content(
         self,
-        sources: List[dict],
+        sources: Dict[str, Any],
         valid_sources: List[Tuple[int, dict]],
         html_contents: List[str],
         query: str
-    ) -> List[dict]:
+    ) -> Dict[str, Any]:
         for (_, source), html in zip(valid_sources, html_contents):
             source['html'] = self._process_html_content(html, query)
         return sources

@@ -166,3 +166,8 @@ cython_debug/
 /.roomodes
 /project_journal/
 mcp_server/
+/venv-agents/
+/venv-all/
+/venv-base/
+/venv-demo/
+/venv-eval/

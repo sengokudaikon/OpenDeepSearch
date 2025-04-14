@@ -1,7 +1,5 @@
 from smolagents import Tool
 import wolframalpha
-import json
-import os
 
 class WolframAlphaTool(Tool):
     name = "calculate"

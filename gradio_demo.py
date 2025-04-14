@@ -1,8 +1,21 @@
-from smolagents import CodeAgent, GradioUI, LiteLLMModel
-from opendeepsearch import OpenDeepSearchTool
-import os
-from dotenv import load_dotenv
 import argparse
+import os
+import socket
+import sys
+import importlib.util
+from contextlib import closing
+
+from dotenv import load_dotenv
+
+# Check if gradio is installed
+if importlib.util.find_spec("gradio") is None:
+    print("Error: The 'gradio' package is required for this script.")
+    print("Install it with: pip install -e .[demo] or pip install gradio==5.20.1")
+    sys.exit(1)
+
+from smolagents import CodeAgent, GradioUI, LiteLLMModel
+
+from opendeepsearch import OpenDeepSearchTool
 
 # Load environment variables
 load_dotenv()
@@ -63,5 +76,21 @@ model = LiteLLMModel(
 # Initialize the agent with the search tool
 agent = CodeAgent(tools=[search_tool], model=model)
 
-# Add a name when initializing GradioUI
-GradioUI(agent).launch(server_name="127.0.0.1", server_port=args.server_port, share=False)
+
+def find_free_port(start_port):
+    """Find a free port starting from start_port."""
+    with closing(socket.socket(socket.AF_INET, socket.SOCK_STREAM)) as s:
+        for port in range(start_port, start_port + 100):
+            try:
+                s.bind(('127.0.0.1', port))
+                s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                return port
+            except OSError:
+                continue
+    raise OSError(f"Could not find a free port in range {start_port}-{start_port+100}")
+
+free_port = find_free_port(args.server_port)
+if free_port != args.server_port:
+    print(f"Port {args.server_port} is in use. Using port {free_port} instead.")
+
+GradioUI(agent).launch(server_name="127.0.0.1", server_port=free_port, share=True)

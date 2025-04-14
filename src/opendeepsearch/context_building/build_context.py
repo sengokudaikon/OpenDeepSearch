@@ -1,6 +1,5 @@
 from typing import List, Dict, Optional
 from loguru import logger
-from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 
 def extract_information(organic_results: List[Dict]) -> List[str]:

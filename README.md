@@ -226,35 +226,47 @@ print(result)
 
 ### Running the Gradio Demo 🖥️
 
-To try out OpenDeepSearch with a user-friendly interface, simply run:
+To try out OpenDeepSearch with a user-friendly interface, you first need to install the necessary optional dependencies:
+
+```bash
+# Install the project with the 'demo' extras
+# pip install -e .[demo]
+# Or using uv:
+uv pip install -e .[demo]
+```
+
+Then, simply run the demo script:
 
 ```bash
 python gradio_demo.py
 ```
+
+The script will automatically check if the required `gradio` dependency is installed and provide instructions if it's missing.
 
 This will launch a local web interface where you can test different search queries and modes interactively.
 
 You can customize the demo with command-line arguments:
 
 ```bash
-# Using Serper (default)
+# Using Serper (default) and Jina reranker
 python gradio_demo.py --model-name "openrouter/google/gemini-2.0-flash-001" --reranker "jina"
 
-# Using SearXNG
-python gradio_demo.py --model-name "openrouter/google/gemini-2.0-flash-001" --reranker "jina" \
+# Using SearXNG and Infinity reranker
+python gradio_demo.py --model-name "openrouter/google/gemini-2.0-flash-001" --reranker "infinity" \
   --search-provider "searxng" --searxng-instance "https://your-searxng-instance.com" \
   --searxng-api-key "your-api-key-here"  # Optional
 ```
 
 Available options:
-- `--model-name`: LLM model to use for search
-- `--orchestrator-model`: LLM model for the agent orchestrator
-- `--reranker`: Reranker to use (`jina` or `infinity`)
-- `--search-provider`: Search provider to use (`serper` or `searxng`)
-- `--searxng-instance`: SearXNG instance URL (required if using `searxng`)
-- `--searxng-api-key`: SearXNG API key (optional)
-- `--serper-api-key`: Serper API key (optional, will use environment variable if not provided)
-- `--openai-base-url`: OpenAI API base URL (optional, will use OPENAI_BASE_URL env var if not provided)
+- `--model-name`: LLM model to use for search (defaults to `LITELLM_SEARCH_MODEL_ID` or `LITELLM_MODEL_ID` env var, or `openrouter/google/gemini-2.0-flash-001`).
+- `--orchestrator-model`: LLM model for the agent orchestrator (defaults to `LITELLM_ORCHESTRATOR_MODEL_ID` or `LITELLM_MODEL_ID` env var, or `openrouter/google/gemini-2.0-flash-001`).
+- `--reranker`: Reranker to use (`jina` or `infinity`, default: `jina`).
+- `--search-provider`: Search provider to use (`serper` or `searxng`, default: `serper`).
+- `--searxng-instance`: SearXNG instance URL (required if using `searxng`, defaults to `SEARXNG_INSTANCE_URL` env var).
+- `--searxng-api-key`: SearXNG API key (optional, defaults to `SEARXNG_API_KEY` env var).
+- `--serper-api-key`: Serper API key (optional, defaults to `SERPER_API_KEY` env var).
+- `--openai-base-url`: OpenAI API base URL (optional, defaults to `OPENAI_BASE_URL` env var).
+- `--server-port`: Port to run the Gradio server on (default: 7860).
 
 ### Integrating with SmolAgents & LiteLLM 🤖⚙️
 
