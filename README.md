@@ -220,8 +220,14 @@ if not search_agent.is_initialized:
     search_agent.setup()
 
 query = "Fastest land animal?"
+
+# Basic search
 result = search_agent.forward(query)
 print(result)
+
+# Search with minimum number of sources
+result_with_sources = search_agent.forward(query, min_sources=3)
+print(f"Result with at least 3 sources: {result_with_sources}")
 ```
 
 ### Running the Gradio Demo 🖥️
@@ -353,7 +359,7 @@ print(result)
 
 ## Search Modes 🔄
 
-OpenDeepSearch offers two distinct search modes to balance between speed and depth:
+OpenDeepSearch offers two distinct search modes to balance between speed and depth, plus a parameter to control source diversity:
 
 ### Default Mode ⚡
 - Uses SERP-based interaction for quick results
@@ -372,6 +378,20 @@ OpenDeepSearch offers two distinct search modes to balance between speed and dep
   - Complex search requirements
   - Detailed information gathering
   - Questions requiring cross-reference verification
+
+### Source Control Parameters
+
+#### min_sources Parameter
+- Forces the model to search for a minimum number of unique sources
+- Useful for ensuring information diversity and cross-verification
+- Example usage: `search_agent.forward(query, min_sources=3)`
+- Can be combined with either Default or Pro mode
+- Helps prevent over-reliance on a single source (like Wikipedia)
+
+#### max_sources Parameter
+- Controls the maximum number of sources to process (default: 2)
+- Balances between comprehensive information and processing time
+- Example usage: `search_agent.forward(query, max_sources=5)`
 
 ## Acknowledgments 💡
 

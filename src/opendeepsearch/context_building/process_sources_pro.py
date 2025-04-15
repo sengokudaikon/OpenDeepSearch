@@ -52,25 +52,41 @@ class SourceProcessor:
         sources: SearchResult[Dict[str, Any]],
         num_elements: int,
         query: str,
-        pro_mode: bool = False
+        pro_mode: bool = False,
+        min_sources: int = 0
     ) -> Dict[str, Any]:
         try:
             if not sources.data:
                 print("Warning: sources object does not have data")
                 return {}
 
-            valid_sources = _get_valid_sources(sources, num_elements)
+            valid_sources = _get_valid_sources(sources, max(num_elements, min_sources))
             if not valid_sources:
                 return sources.data
 
-            if not pro_mode:
+            if not pro_mode and min_sources <= 1:
                 # Check if there's a Wikipedia article among valid sources
                 wiki_sources = [(i, source) for i, source in valid_sources
                               if 'wikipedia.org' in source['link']]
                 if not wiki_sources:
-                    return sources.data
-                # If Wikipedia article exists, only process that
-                valid_sources = wiki_sources[:1]  # Take only the first Wikipedia source
+                    # If min_sources is set and we don't have Wikipedia, use other sources
+                    if min_sources > 0:
+                        valid_sources = valid_sources[:min_sources]
+                    else:
+                        return sources.data
+                else:
+                    # If Wikipedia article exists and min_sources <= 1, only process that
+                    # Otherwise, include Wikipedia and other sources to meet min_sources
+                    if min_sources <= 1:
+                        valid_sources = wiki_sources[:1]  # Take only the first Wikipedia source
+                    else:
+                        # Prioritize Wikipedia but include other sources to meet min_sources
+                        other_sources = [(i, source) for i, source in valid_sources
+                                      if 'wikipedia.org' not in source['link']]
+                        valid_sources = wiki_sources[:1] + other_sources[:min_sources-1]
+            elif min_sources > 0:
+                # Ensure we have at least min_sources sources
+                valid_sources = valid_sources[:max(num_elements, min_sources)]
 
             html_contents = await self._fetch_html_contents([s[1]['link'] for s in valid_sources])
             return self._update_sources_with_content(sources.data, valid_sources, html_contents, query)

@@ -11,6 +11,12 @@ class OpenDeepSearchTool(Tool):
             "type": "string",
             "description": "The search query to perform",
         },
+        "min_sources": {
+            "type": "integer",
+            "description": "Minimum number of unique sources to include (default: 0)",
+            "default": 0,
+            "nullable": True,
+        },
     }
     output_type = "string"
 
@@ -31,8 +37,8 @@ class OpenDeepSearchTool(Tool):
         self.searxng_instance_url = searxng_instance_url
         self.searxng_api_key = searxng_api_key
 
-    def forward(self, query: str):
-        answer = self.search_tool.ask_sync(query, max_sources=2, pro_mode=True)
+    def forward(self, query: str, min_sources: int = 0):
+        answer = self.search_tool.ask_sync(query, max_sources=2, min_sources=min_sources, pro_mode=True)
         return answer
 
     def setup(self):

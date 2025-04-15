@@ -79,6 +79,7 @@ class OpenDeepSearchAgent:
         self,
         query: str,
         max_sources: int = 2,
+        min_sources: int = 0,
         pro_mode: bool = False
     ) -> tuple[str, list[dict[str, Any]]]:
         """
@@ -92,6 +93,8 @@ class OpenDeepSearchAgent:
             max_sources (int, default=2): Maximum number of sources to process. If pro_mode
                 is enabled, this overrides the top_results setting in source_processor_config
                 when it's smaller.
+            min_sources (int, default=0): Minimum number of unique sources to include. If greater
+                than 0, forces the model to search for at least this many unique sources.
             pro_mode (bool, default=False): When enabled, performs a deeper search and more
                 thorough content processing.
 
@@ -106,7 +109,8 @@ class OpenDeepSearchAgent:
             sources,
             max_sources,
             query,
-            pro_mode
+            pro_mode,
+            min_sources
         )
 
         context_string = build_context(processed_sources)
@@ -117,6 +121,7 @@ class OpenDeepSearchAgent:
         self,
         query: str,
         max_sources: int = 2,
+        min_sources: int = 0,
         pro_mode: bool = False,
     ) -> dict[str, Any]:
         """
@@ -129,6 +134,8 @@ class OpenDeepSearchAgent:
         Args:
             query (str): The question or query to answer.
             max_sources (int, default=2): Maximum number of sources to include in the context.
+            min_sources (int, default=0): Minimum number of unique sources to include. If greater
+                than 0, forces the model to search for at least this many unique sources.
             pro_mode (bool, default=False): When enabled, performs a more comprehensive search
                 and analysis of sources.
 
@@ -137,7 +144,7 @@ class OpenDeepSearchAgent:
                 - "answer" (str): The AI-generated response.
                 - "sources" (list[dict[str, Any]]): The list of processed sources.
         """
-        context, sources = await self.search_and_build_context(query, max_sources, pro_mode)
+        context, sources = await self.search_and_build_context(query, max_sources, min_sources, pro_mode)
 
         messages = [
             {"role": "system", "content": self.system_prompt},
@@ -160,6 +167,7 @@ class OpenDeepSearchAgent:
         self,
         query: str,
         max_sources: int = 2,
+        min_sources: int = 0,
         pro_mode: bool = False,
     ) -> dict[str, Any]:
         """
@@ -176,4 +184,4 @@ class OpenDeepSearchAgent:
             loop = asyncio.new_event_loop()
             asyncio.set_event_loop(loop)
 
-        return loop.run_until_complete(self.ask(query, max_sources, pro_mode))
+        return loop.run_until_complete(self.ask(query, max_sources, min_sources, pro_mode))
