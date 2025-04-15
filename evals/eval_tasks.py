@@ -7,23 +7,21 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-import datasets
 import pandas as pd
 from datasets import Dataset
 from dotenv import load_dotenv
-from tqdm import tqdm
-from opendeepsearch import OpenDeepSearchTool
-
 from smolagents import (
     AgentError,
     CodeAgent,
-    LiteLLMModel,
     HfApiModel,
+    LiteLLMModel,
     PythonInterpreterTool,
     ToolCallingAgent,
 )
 from smolagents.agents import ActionStep
+from tqdm import tqdm
 
+from opendeepersearch import OpenDeepSearchTool
 
 load_dotenv()
 
@@ -132,7 +130,10 @@ def answer_single_question(example, model, answers_file, action_type, search_mod
         )
     elif action_type == "tool-calling":
         agent = ToolCallingAgent(
-            tools=[OpenDeepSearchTool(model_name=search_model_id or model.model_id), PythonInterpreterTool()],
+            tools=[
+                OpenDeepSearchTool(model_name=search_model_id or model.model_id),
+                PythonInterpreterTool(),
+            ],
             model=model,
             additional_authorized_imports=["numpy"],
             max_steps=15,
@@ -140,27 +141,29 @@ def answer_single_question(example, model, answers_file, action_type, search_mod
 
     augmented_question = example["question"]
     start_time = time.time()
-    TIMEOUT_SECONDS = 300  # 5 minutes timeout
+    timeout_seconds = 300
 
     try:
         if action_type == "vanilla":
+
             def get_vanilla_response():
                 response = agent([{"role": "user", "content": augmented_question}])
                 return response.content, agent.last_output_token_count
-            
-            answer, token_count = run_with_timeout(get_vanilla_response, TIMEOUT_SECONDS)
+
+            answer, token_count = run_with_timeout(get_vanilla_response, timeout_seconds)
             intermediate_steps = answer
         else:
+
             def get_agent_response():
                 response = str(agent.run(augmented_question))
                 token_count = agent.monitor.get_total_token_counts()
-                # Remove memory from logs to make them more compact.
+
                 for step in agent.memory.steps:
                     if isinstance(step, ActionStep):
                         step.agent_memory = None
                 return response, token_count, str(agent.memory.steps)
-            
-            answer, token_count, intermediate_steps = run_with_timeout(get_agent_response, TIMEOUT_SECONDS)
+
+            answer, token_count, intermediate_steps = run_with_timeout(get_agent_response, timeout_seconds)
 
         end_time = time.time()
     except Exception as e:
@@ -193,14 +196,13 @@ def answer_questions(
 ):
     date = date or datetime.date.today().isoformat()
     model_id = model.model_id
-    
-    # Create directory structure: output/model_id/action_type/task
-    model_dir = model_id.replace('/', '__')
-    
+
+    model_dir = model_id.replace("/", "__")
+
     for task in eval_ds:
         task_dir = os.path.join(output_dir, model_dir, action_type, task)
         os.makedirs(task_dir, exist_ok=True)
-        
+
         for trial in range(num_trials):
             file_name = f"{task_dir}/{model_id.replace('/', '__')}__{action_type}__{task}__trial{trial}.jsonl"
             print(f"Starting processing trial {trial + 1}/{num_trials} and writing output to '{file_name}'")
@@ -214,7 +216,14 @@ def answer_questions(
 
             with ThreadPoolExecutor(max_workers=parallel_workers) as exe:
                 futures = [
-                    exe.submit(answer_single_question, example, model, file_name, action_type, search_model_id) 
+                    exe.submit(
+                        answer_single_question,
+                        example,
+                        model,
+                        file_name,
+                        action_type,
+                        search_model_id,
+                    )
                     for example in examples_todo
                 ]
                 for f in tqdm(as_completed(futures), total=len(examples_todo), desc="Processing tasks"):
@@ -233,7 +242,6 @@ if __name__ == "__main__":
             args.model_id,
             max_completion_tokens=8192,
             temperature=0.2,
-            # api_key=os.getenv("OPENROUTER_API_KEY"),
         )
     else:
         model = HfApiModel(args.model_id, provider="together", max_tokens=8192)

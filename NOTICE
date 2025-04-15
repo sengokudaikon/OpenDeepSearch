@@ -1,0 +1,20 @@
+OpenDeeperSearch
+Copyright 2024 Daniil Zavrin
+
+This project is a derivative work based on OpenDeepSearch by Salaheddin Alzubi and Sentient AGI contributors.
+Original project: https://github.com/sentient-agi/OpenDeepSearch
+
+This project includes significant modifications and new features developed by Daniil Zavrin.
+
+The original work is licensed under the Apache License, Version 2.0, and this derivative work
+maintains the same license. A copy of the Apache License, Version 2.0 can be found in the LICENSE file.
+
+This project references the research paper:
+"Open Deep Search: Democratizing Search with Open-source Reasoning Agents"
+by Salaheddin Alzubi et al., available at: https://arxiv.org/abs/2503.20201
+
+This project utilizes components from the following open-source projects:
+- SmolAgents (https://huggingface.co/docs/smolagents/index)
+- Crawl4AI (https://github.com/unclecode/crawl4ai)
+- Infinity Embedding API (https://github.com/michaelfeil/infinity)
+- LiteLLM (https://www.litellm.ai/)

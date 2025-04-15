@@ -171,3 +171,6 @@ mcp_server/
 /venv-base/
 /venv-demo/
 /venv-eval/
+.aider*
+.DS_Store
+.gradio/

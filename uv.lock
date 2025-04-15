@@ -1704,7 +1704,7 @@ wheels = [
 ]
 
 [[package]]
-name = "opendeepsearch"
+name = "opendeepersearch"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
