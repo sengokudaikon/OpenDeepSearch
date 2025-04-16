@@ -1,44 +1,23 @@
-# 🔍OpenDeepSearch: Democratizing Search with Open-source Reasoning Models and Reasoning Agents 🚀
-> **Note:** This repository is a fork of [sentient-agi/OpenDeepSearch](https://github.com/sentient-agi/OpenDeepSearch).
+# 🔍 OpenDeeperSearch: Advanced Search with Open-source Reasoning Models 🚀
 
+> **Note:** This project is a significantly modified fork of [sentient-agi/OpenDeepSearch](https://github.com/sentient-agi/OpenDeepSearch) with substantial enhancements and new features.
 
 <!-- markdownlint-disable first-line-h1 -->
 <!-- markdownlint-disable html -->
 <!-- markdownlint-disable no-duplicate-header -->
 
 <div align="center">
-    <img src="./assets/sentient-logo-narrow.png" alt="alt text" width="60%"/>
+    <h3>Based on research from the paper:</h3>
+    <h4 align="center">
+        <a href="https://arxiv.org/pdf/2503.20201">Open Deep Search: Democratizing Search with Open-source Reasoning Agents</a>
+    </h4>
 </div>
 
 <hr>
-<div align="center" style="line-height: 1;">
-  <a href="https://sentient.xyz/" target="_blank" style="margin: 2px;">
-    <img alt="Homepage" src="https://img.shields.io/badge/Sentient-Homepage-%23EAEAEA?logo=data%3Aimage%2Fsvg%2Bxml%3Bbase64%2CPHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzNDEuMzMzIiBoZWlnaHQ9IjM0MS4zMzMiIHZlcnNpb249IjEuMCIgdmlld0JveD0iMCAwIDI1NiAyNTYiPjxwYXRoIGQ9Ik0xMzIuNSAyOC40Yy0xLjUgMi4yLTEuMiAzLjkgNC45IDI3LjIgMy41IDEzLjcgOC41IDMzIDExLjEgNDIuOSAyLjYgOS45IDUuMyAxOC42IDYgMTkuNCAzLjIgMy4zIDExLjctLjggMTMuMS02LjQuNS0xLjktMTcuMS03Mi0xOS43LTc4LjYtMS4yLTMtNy41LTYuOS0xMS4zLTYuOS0xLjYgMC0zLjEuOS00LjEgMi40ek0xMTAgMzBjLTEuMSAxLjEtMiAzLjEtMiA0LjVzLjkgMy40IDIgNC41IDMuMSAyIDQuNSAyIDMuNC0uOSA0LjUtMiAyLTMuMSAyLTQuNS0uOS0zLjQtMi00LjUtMy4xLTItNC41LTItMy40LjktNC41IDJ6TTgxLjUgNDYuMWMtMi4yIDEuMi00LjYgMi44LTUuMiAzLjctMS44IDIuMy0xLjYgNS42LjUgNy40IDEuMyAxLjIgMzIuMSAxMC4yIDQ1LjQgMTMuMyAzIC44IDYuOC0yLjIgNi44LTUuMyAwLTMuNi0yLjItOS4yLTMuOS0xMC4xQzEyMy41IDU0LjIgODcuMiA0NCA4NiA0NGMtLjMuMS0yLjMgMS00LjUgMi4xek0xNjUgNDZjLTEuMSAxLjEtMiAyLjUtMiAzLjIgMCAyLjggMTEuMyA0NC41IDEyLjYgNDYuNS45IDEuNSAyLjQgMi4zIDQuMiAyLjMgMy44IDAgOS4yLTUuNiA5LjItOS40IDAtMS41LTIuMS0xMC45LTQuNy0yMC44bC00LjctMTguMS00LjUtMi44Yy01LjMtMy40LTcuNC0zLjYtMTAuMS0uOXpNNDguNyA2NS4xYy03LjcgNC4xLTYuOSAxMC43IDEuNSAxMyAyLjQuNiAyMS40IDUuOCA0Mi4yIDExLjYgMjIuOCA2LjIgMzguOSAxMC4yIDQwLjMgOS44IDMuNS0uOCA0LjYtMy44IDMuMi04LjgtMS41LTUuNy0yLjMtNi41LTguMy04LjJDOTQuMiA3My4xIDU2LjYgNjMgNTQuOCA2M2MtMS4zLjEtNCAxLTYuMSAyLjF6TTE5OC4yIDY0LjdjLTMuMSAyLjgtMy41IDUuNi0xLjEgOC42IDQgNS4xIDEwLjkgMi41IDEwLjktNC4xIDAtNS4zLTUuOC03LjktOS44LTQuNXpNMTgxLjggMTEzLjFjLTI3IDI2LjQtMzEuOCAzMS41LTMxLjggMzMuOSAwIDEuNi43IDMuNSAxLjUgNC40IDEuNyAxLjcgNy4xIDMgMTAuMiAyLjQgMi4xLS4zIDU2LjktNTMuNCA1OS01Ny4xIDEuNy0zLjEgMS42LTkuOC0uMy0xMi41LTMuNi01LjEtNC45LTQuMi0zOC42IDI4Ljl6TTM2LjYgODguMWMtNSA0LTIuNCAxMC45IDQuMiAxMC45IDMuMyAwIDYuMi0yLjkgNi4yLTYuMyAwLTIuMS00LjMtNi43LTYuMy02LjctLjggMC0yLjYuOS00LjEgMi4xek02My40IDk0LjVjLTEuNi43LTguOSA3LjMtMTYuMSAxNC43TDM0IDEyMi43djUuNmMwIDYuMyAxLjYgOC43IDUuOSA4LjcgMi4xIDAgNi0zLjQgMTkuOS0xNy4zIDkuNS05LjUgMTcuMi0xOCAxNy4yLTE4LjkgMC00LjctOC40LTguNi0xMy42LTYuM3pNNjIuOSAxMzAuNiAzNCAxNTkuNXY1LjZjMCA2LjIgMS44IDguOSA2IDguOSAzLjIgMCA2Ni02Mi40IDY2LTY1LjYgMC0zLjMtMy41LTUuNi05LjEtNi4ybC01LS41LTI5IDI4Ljl6TTE5Ni4zIDEzNS4yYy05IDktMTYuNiAxNy4zLTE2LjkgMTguNS0xLjMgNS4xIDIuNiA4LjMgMTAgOC4zIDIuOCAwIDUuMi0yIDE3LjktMTQuOCAxNC41LTE0LjcgMTQuNy0xNC45IDE0LjctMTkuMyAwLTUuOC0yLjItOC45LTYuMi04LjktMi42IDAtNS40IDIuMy0xOS41IDE2LjJ6TTk2IDEzNi44Yy0yLjkuOS04IDYuNi04IDkgMCAxLjMgMi45IDEzLjQgNi40IDI3IDMuNiAxMy42IDcuOSAzMC4zIDkuNyAzNy4yIDEuNyA2LjkgMy42IDEzLjMgNC4xIDE0LjIuNSAxIDIuNiAyLjcgNC44IDMuOCA2LjggMy41IDExIDIuMyAxMS0zLjIgMC0zLTIwLjYtODMuMS0yMi4xLTg1LjktLjktMS45LTMuNi0yLjgtNS45LTIuMXpNMTIwLjUgMTU4LjRjLTEuOSAyLjktMS4yIDguNSAxLjQgMTEuNiAxLjEgMS40IDEyLjEgNC45IDM5LjYgMTIuNSAyMC45IDUuOCAzOC44IDEwLjUgMzkuOCAxMC41czMuNi0xIDUuNy0yLjJjOC4xLTQuNyA3LjEtMTAuNi0yLjMtMTMuMi0yOC4yLTguMS03OC41LTIxLjYtODAuMy0yMS42LTEuNCAwLTMgMS0zLjkgMi40ek0yMTAuNyAxNTguOGMtMS44IDEuOS0yLjIgNS45LS45IDcuOCAxLjUgMi4zIDUgMy40IDcuNiAyLjQgNi40LTIuNCA1LjMtMTEuMi0xLjUtMTEuOC0yLjQtLjItNCAuMy01LjIgMS42ek02OS42IDE2MmMtMiAyLjItMy42IDQuMy0zLjYgNC44LjEgMi42IDEwLjEgMzguNiAxMS4xIDM5LjkgMi4yIDIuNiA5IDUuNSAxMS41IDQuOSA1LTEuMyA0LjktMy0xLjUtMjcuNy0zLjMtMTIuNy02LjUtMjMuNy03LjItMjQuNS0yLjItMi43LTYuNC0xLjctMTAuMyAyLjZ6TTQ5LjYgMTgxLjVjLTIuNCAyLjUtMi45IDUuNC0xLjIgOEM1MiAxOTUgNjAgMTkzIDYwIDE4Ni42YzAtMS45LS44LTQtMS44LTQuOS0yLjMtMi4xLTYuNi0yLjItOC42LS4yek0xMjguNSAxODdjLTIuMyAyLjUtMS4zIDEwLjMgMS42IDEyLjggMi4yIDEuOSAzNC44IDExLjIgMzkuNCAxMS4yIDMuNiAwIDEwLjEtNC4xIDExLTcgLjYtMS45LTEuNy03LTMuMS03LS4yIDAtMTAuMy0yLjctMjIuMy02cy0yMi41LTYtMjMuMy02Yy0uOCAwLTIuMy45LTMuMyAyek0xMzYuNyAyMTYuOGMtMy40IDMuOC0xLjUgOS41IDMuNSAxMC43IDMuOSAxIDguMy0zLjQgNy4zLTcuMy0xLjItNS4xLTcuNS03LjEtMTAuOC0zLjR6Ii8%2BPC9zdmc%2B&link=https%3A%2F%2Fhuggingface.co%2FSentientagi" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-  <a href="https://github.com/sentient-agi" target="_blank" style="margin: 2px;">
-    <img alt="GitHub" src="https://img.shields.io/badge/Github-sentient_agi-181717?logo=github" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-  <a href="https://huggingface.co/Sentientagi" target="_blank" style="margin: 2px;">
-    <img alt="Hugging Face" src="https://img.shields.io/badge/%F0%9F%A4%97%20Hugging%20Face-SentientAGI-ffc107?color=ffc107&logoColor=white" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-</div>
-
-<div align="center" style="line-height: 1;">
-  <a href="https://discord.gg/sentientfoundation" target="_blank" style="margin: 2px;">
-    <img alt="Discord" src="https://img.shields.io/badge/Discord-SentientAGI-7289da?logo=discord&logoColor=white&color=7289da" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-  <a href="https://x.com/SentientAGI" target="_blank" style="margin: 2px;">
-    <img alt="Twitter Follow" src="https://img.shields.io/badge/-SentientAGI-grey?logo=x&link=https%3A%2F%2Fx.com%2FSentientAGI%2F" style="display: inline-block; vertical-align: middle;"/>
-  </a>
-</div>
-
-<h4 align="center">
-        <a href="https://arxiv.org/pdf/2503.20201"> Paper  </a>
-</h4>
 
 ## Description 📝
 
-OpenDeepSearch is a lightweight yet powerful search tool designed for seamless integration with AI agents. It enables deep web search and retrieval, optimized for use with Hugging Face's **[SmolAgents](https://github.com/huggingface/smolagents)** ecosystem.
+OpenDeeperSearch is a lightweight yet powerful search tool designed for seamless integration with AI agents. It enables deep web search and retrieval, optimized for use with Hugging Face's **[SmolAgents](https://github.com/huggingface/smolagents)** ecosystem. This version includes significant improvements and new features developed by Daniil Zavrin.
 
 <div align="center">
     <img src="./assets/evals.png" alt="Evaluation Results" width="80%"/>
@@ -49,7 +28,7 @@ OpenDeepSearch is a lightweight yet powerful search tool designed for seamless i
 
 ## Table of Contents 📑
 
-- [🔍OpenDeepSearch: Democratizing Search with Open-source Reasoning Models and Reasoning Agents 🚀](#opendeepsearch-democratizing-search-with-open-source-reasoning-models-and-reasoning-agents-)
+- [🔍 OpenDeeperSearch: Advanced Search with Open-source Reasoning Models 🚀](#-enhanced-opendeepsearch-advanced-search-with-open-source-reasoning-models-)
   - [Description 📝](#description-)
   - [Table of Contents 📑](#table-of-contents-)
   - [Features ✨](#features-)
@@ -59,14 +38,14 @@ OpenDeepSearch is a lightweight yet powerful search tool designed for seamless i
     - [Using OpenDeepSearch Standalone 🔍](#using-opendeepsearch-standalone-)
     - [Running the Gradio Demo 🖥️](#running-the-gradio-demo-️)
     - [Integrating with SmolAgents \& LiteLLM 🤖⚙️](#integrating-with-smolagents--litellm-️)
-      - [](#)
     - [ReAct agent with math and search tools 🤖⚙️](#react-agent-with-math-and-search-tools-️)
-      - [](#-1)
   - [Search Modes 🔄](#search-modes-)
     - [Default Mode ⚡](#default-mode-)
     - [Pro Mode 🔍](#pro-mode-)
+  - [Development](#development)
   - [Acknowledgments 💡](#acknowledgments-)
   - [Citation](#citation)
+  - [License](#license)
   - [Contact 📩](#contact-)
   - [MCP Server 🔌](#mcp-server-)
 
@@ -79,10 +58,13 @@ OpenDeepSearch is a lightweight yet powerful search tool designed for seamless i
 - **Optimized for AI Agents** 🤖: Works seamlessly with **SmolAgents** like `CodeAgent`.
 - **Fast and Lightweight** ⚡: Designed for speed and efficiency with minimal setup.
 - **Extensible** 🔌: Easily configurable to work with different models and APIs.
+- **Streaming Support** 🌊: Added support for streaming responses in Gradio interface.
+- **Enhanced Error Handling** 🛡️: Improved error handling and recovery mechanisms.
+- **Modern Development Workflow** 🛠️: Comprehensive tooling for development, testing, and deployment.
 
 ## Installation 📚
 
-To install OpenDeepSearch, run:
+To install OpenDeeperSearch, run:
 
 ```bash
 pip install -e . #you can also use: uv pip install -e .
@@ -139,7 +121,7 @@ PDM offers several advantages:
 2. **Choose a Reranking Solution**:
    - **Quick Start with Jina**: Sign up at [Jina AI](https://jina.ai/) to get an API key for immediate use
    - **Self-hosted Option**: Set up [Infinity Embeddings](https://github.com/michaelfeil/infinity) server locally with open source models such as [Qwen2-7B-instruct](https://huggingface.co/Alibaba-NLP/gte-Qwen2-7B-instruct/tree/main)
-   - For more details on reranking options, see our [Rerankers Guide](src/opendeepsearch/ranking_models/README.md)
+   - For more details on reranking options, see our [Rerankers Guide](src/opendeepersearch/ranking_models/README.md)
 
 3. **Set up LiteLLM Provider**:
    - Choose a provider from the [supported list](https://docs.litellm.ai/docs/providers/), including:
@@ -189,7 +171,7 @@ You can use OpenDeepSearch independently or integrate it with **SmolAgents** for
 ### Using OpenDeepSearch Standalone 🔍
 
 ```python
-from opendeepsearch import OpenDeepSearchTool
+from opendeepersearch import OpenDeepSearchTool
 import os
 
 # Set environment variables for API keys
@@ -220,38 +202,69 @@ if not search_agent.is_initialized:
     search_agent.setup()
 
 query = "Fastest land animal?"
+
+# Basic search
 result = search_agent.forward(query)
 print(result)
+
+# Search with minimum number of sources
+result_with_sources = search_agent.forward(query, min_sources=3)
+print(f"Result with at least 3 sources: {result_with_sources}")
 ```
 
-### Running the Gradio Demo 🖥️
+### Running the Demos 🖥️
 
-To try out OpenDeepSearch with a user-friendly interface, you first need to install the necessary optional dependencies:
+OpenDeeperSearchoffers two different demo interfaces:
+
+1. **Gradio Demo**: A chat-like interface with streaming responses
+2. **Web Demo**: A simple web interface using FastAPI and HTMX
+
+#### Using Just Commands
+
+The easiest way to run the demos is using the provided Just commands:
 
 ```bash
-# Install the project with the 'demo' extras
-# pip install -e .[demo]
-# Or using uv:
+# Run the Gradio demo
+just demo
+
+# Run the Web demo
+just web-demo
+
+# Install all demo dependencies (without running any demo)
+just all-demos
+```
+
+#### Manual Installation and Running
+
+Alternatively, you can install the dependencies manually:
+
+```bash
+# For the Gradio demo
+uv pip install -e .[gradio-demo]
+python gradio_demo.py
+
+# For the Web demo
+uv pip install -e .[web-demo]
+python simple_web_demo.py
+
+# For both demos
 uv pip install -e .[demo]
 ```
 
-Then, simply run the demo script:
+Both demos will automatically check if the required dependencies are installed and provide instructions if anything is missing.
+
+#### Customizing the Demos
+
+You can customize either demo with similar command-line arguments:
 
 ```bash
-python gradio_demo.py
-```
-
-The script will automatically check if the required `gradio` dependency is installed and provide instructions if it's missing.
-
-This will launch a local web interface where you can test different search queries and modes interactively.
-
-You can customize the demo with command-line arguments:
-
-```bash
-# Using Serper (default) and Jina reranker
+# Example for Gradio demo
 python gradio_demo.py --model-name "openrouter/google/gemini-2.0-flash-001" --reranker "jina"
 
-# Using SearXNG and Infinity reranker
+# Example for Web demo
+python simple_web_demo.py --model-name "openrouter/google/gemini-2.0-flash-001" --reranker "jina"
+
+# Using SearXNG and Infinity reranker (works with either demo)
 python gradio_demo.py --model-name "openrouter/google/gemini-2.0-flash-001" --reranker "infinity" \
   --search-provider "searxng" --searxng-instance "https://your-searxng-instance.com" \
   --searxng-api-key "your-api-key-here"  # Optional
@@ -270,10 +283,8 @@ Available options:
 
 ### Integrating with SmolAgents & LiteLLM 🤖⚙️
 
-####
-
 ```python
-from opendeepsearch import OpenDeepSearchTool
+from opendeepersearch import OpenDeepSearchTool
 from smolagents import CodeAgent, LiteLLMModel
 import os
 
@@ -314,11 +325,10 @@ print(result)
 ```
 ### ReAct agent with math and search tools 🤖⚙️
 
-####
 ```python
-from opendeepsearch import OpenDeepSearchTool
-from opendeepsearch.wolfram_tool import WolframAlphaTool
-from opendeepsearch.prompts import REACT_PROMPT
+from opendeepersearch import OpenDeepSearchTool
+from opendeepersearch.wolfram_tool import WolframAlphaTool
+from opendeepersearch.prompts import REACT_PROMPT
 from smolagents import LiteLLMModel, ToolCallingAgent, Tool
 import os
 
@@ -353,7 +363,7 @@ print(result)
 
 ## Search Modes 🔄
 
-OpenDeepSearch offers two distinct search modes to balance between speed and depth:
+OpenDeepSearch offers two distinct search modes to balance between speed and depth, plus a parameter to control source diversity:
 
 ### Default Mode ⚡
 - Uses SERP-based interaction for quick results
@@ -373,9 +383,44 @@ OpenDeepSearch offers two distinct search modes to balance between speed and dep
   - Detailed information gathering
   - Questions requiring cross-reference verification
 
+### Source Control Parameters
+
+#### min_sources Parameter
+- Forces the model to search for a minimum number of unique sources
+- Useful for ensuring information diversity and cross-verification
+- Example usage: `search_agent.forward(query, min_sources=3)`
+- Can be combined with either Default or Pro mode
+- Helps prevent over-reliance on a single source (like Wikipedia)
+
+#### max_sources Parameter
+- Controls the maximum number of sources to process (default: 2)
+- Balances between comprehensive information and processing time
+- Example usage: `search_agent.forward(query, max_sources=5)`
+
+## Development
+
+This project uses a modern Python development workflow with comprehensive tooling. To set up the development environment:
+
+```bash
+# Create a fresh development environment
+just fresh-start
+
+# Run code quality checks
+just quality-check
+
+# Run tests
+just test-cov
+```
+
+For more development commands, run:
+
+```bash
+just help
+```
+
 ## Acknowledgments 💡
 
-OpenDeepSearch is built on the shoulders of great open-source projects:
+OpenDeeperSearch is built on the shoulders of great open-source projects:
 
 - **[SmolAgents](https://huggingface.co/docs/smolagents/index)** 🤗 – Powers the agent framework and reasoning capabilities.
 - **[Crawl4AI](https://github.com/unclecode/crawl4ai)** 🕷️ – Provides data crawling support.
@@ -385,7 +430,7 @@ OpenDeepSearch is built on the shoulders of great open-source projects:
 
 ## Citation
 
-If you use `OpenDeepSearch` in your works, please cite it using the following BibTex entry:
+If you use `OpenDeeperSearch` in your works, please cite the original research paper:
 
 ```
 @misc{alzubi2025opendeepsearchdemocratizing,
@@ -399,6 +444,9 @@ If you use `OpenDeepSearch` in your works, please cite it using the following Bi
 }
 ```
 
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.
 
 ## Contact 📩
 

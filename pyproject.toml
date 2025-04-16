@@ -1,12 +1,21 @@
 [project]
-name = "OpenDeepSearch"
-version = "0.1.0"
-description = "Default template for PDM package"
+name = "OpenDeeperSearch"
+version = "0.2.0"
+description = "Enhanced version of OpenDeepSearch with advanced features and improvements"
 authors = [
+    { name = "Daniil Zavrin", email = "50545866+sengokudaikon@users.noreply.github.com" },
     { name = "Salaheddin Alzu'bi", email = "salaheddinalzubi@gmail.com" },
 ]
 
-dependencies = ["openai>=1.66.2", "datasets>=3.3.2", "transformers>=4.49.0", "litellm>=1.61.20", "langchain>=0.3.19", "crawl4ai @ git+https://github.com/salzubi401/crawl4ai.git@main", "fasttext-wheel>=0.9.2", "wikipedia-api>=0.8.1", "pillow>=10.4.0", "loguru", "nest_asyncio", "pydantic==2.10.6", "torch","smolagents>=1.9.2"]
+dependencies = [
+    "vllm",
+    "litellm>=1.61.20",
+    "langchain>=0.3.19",
+    "crawl4ai @ git+https://github.com/sengokudaikon/crawl4ai.git@main",
+    "loguru",
+    "torch",
+    "smolagents>=1.9.2"
+]
 requires-python = ">=3.10"
 readme = "README.md"
 license = { text = "MIT" }
@@ -19,29 +28,95 @@ build-backend = "hatchling.build"
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0.0",
+    "pytest-cov>=4.1.0",
     "ruff>=0.4.0",
     "uv>=0.1.30",
+    "mypy>=1.9.0",
+    "bandit>=1.7.8",
+    "pre-commit>=3.7.0",
+    "black>=24.4.0",
+    "build>=1.2.0",
+    "twine>=5.0.0",
+    "sphinx>=7.3.7",
+    "sphinx-rtd-theme>=2.0.0",
+    "wolframalpha",
+    "gradio==5.20.1",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "jinja2>=3.1.3",
+    "python-dotenv>=1.0.1",
+    "transformers>=4.49.0",
+    "openai>=1.66.2",
+    "datasets>=3.3.2",
+    "fasttext-wheel>=0.9.2",
+    "pillow>=10.4.0",
+    "pydantic==2.10.6",
+    "wikipedia-api>=0.8.1",
+]
+
+evals = [
+    "transformers>=4.49.0",
+    "openai>=1.66.2",
+    "datasets>=3.3.2",
+    "fasttext-wheel>=0.9.2",
+    "pillow>=10.4.0",
+    "pydantic==2.10.6",
+    "wikipedia-api>=0.8.1",
 ]
 
 demo = [
     "gradio==5.20.1",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "jinja2>=3.1.3",
+    "python-dotenv>=1.0.1",
 ]
 
-eval = [
-    "tabulate>=0.9.0",
-]
-scripts = [
+gradio-demo = [
     "gradio==5.20.1",
-    "tabulate>=0.9.0",
 ]
 
-all = [
-    "gradio==5.20.1",
-    "tabulate>=0.9.0",
-    "pytest>=8.0.0",
-    "ruff>=0.4.0",
-    "uv>=0.1.30",
+web-demo = [
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+    "jinja2>=3.1.3",
+    "python-dotenv>=1.0.1",
 ]
 
 [tool.hatch.metadata]
 allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.black]
+line-length = 120
+target-version = ["py310"]
+include = '\.pyi?$'
+exclude = '''
+/(
+    \.git
+  | \.hg
+  | \.mypy_cache
+  | \.tox
+  | \.venv
+  | _build
+  | buck-out
+  | build
+  | dist
+  | __pycache__
+)/
+'''
+
+[tool.ruff]
+target-version = "py310"
+line-length = 300
+select = ["E", "F", "I", "N"]
+ignore = []
+
+[tool.ruff.per-file-ignores]
+# Allow unused variables in __init__.py
+"__init__.py" = ["F401"]
+
+[tool.ruff.isort]
+known-first-party = ["opendeepersearch"]
