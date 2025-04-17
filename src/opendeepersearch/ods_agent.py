@@ -1,12 +1,11 @@
 import asyncio
-import os
 import re
 from typing import Any, AsyncGenerator, Dict, List, Literal, Optional, Set
 from urllib.parse import urlparse
 
-from dotenv import load_dotenv
 from litellm import acompletion, utils
 
+from opendeepersearch.config import config
 from opendeepersearch.context_building.build_context import build_context
 from opendeepersearch.context_building.process_sources_pro import SourceProcessor
 from opendeepersearch.prompts import (
@@ -15,8 +14,6 @@ from opendeepersearch.prompts import (
     SEARCH_SYSTEM_PROMPT,
 )
 from opendeepersearch.serp_search.serp_search import SearchResult, create_search_api
-
-load_dotenv()
 
 
 class OpenDeepSearchAgent:
@@ -29,8 +26,8 @@ class OpenDeepSearchAgent:
         searxng_instance_url: Optional[str] = None,
         searxng_api_key: Optional[str] = None,
         source_processor_config: Optional[Dict[str, Any]] = None,
-        temperature: float = 0.2,
-        top_p: float = 0.3,
+        temperature: Optional[float] = None,
+        top_p: Optional[float] = None,
         reranker: Optional[str] = "None",
     ):
         """
@@ -54,10 +51,10 @@ class OpenDeepSearchAgent:
                 - strategies (List[str]): Content extraction strategies to use
                 - filter_content (bool): Whether to enable content filtering
                 - top_results (int): Number of top results to process
-            temperature (float, default=0.2): Controls randomness in model outputs. Lower values make
-                the output more focused and deterministic.
-            top_p (float, default=0.3): Controls nucleus sampling for model outputs. Lower values make
-                the output more focused on high-probability tokens.
+            temperature (float, default=None): Controls randomness in model outputs. If None, uses the default
+                temperature from the configuration.
+            top_p (float, default=None): Controls nucleus sampling for model outputs. If None, uses the default
+                top_p from the configuration.
             reranker (str, optional): Identifier for the reranker to use. If not provided,
                 uses the default reranker from SourceProcessor.
         """
@@ -75,23 +72,17 @@ class OpenDeepSearchAgent:
 
         self.source_processor = SourceProcessor(**source_processor_config)
 
-        self.model = (
-            model
-            if model is not None
-            else os.getenv(
-                "LITELLM_SEARCH_MODEL_ID",
-                os.getenv("LITELLM_MODEL_ID", "openrouter/google/gemini-2.0-flash-001"),
-            )
-        )
-        self.temperature = temperature
-        self.top_p = top_p
+        self.model = model if model is not None else (config.litellm.search_model_id or config.litellm.model_id)
+        self.temperature = temperature if temperature is not None else config.llm_generation.temperature
+        self.top_p = top_p if top_p is not None else config.llm_generation.top_p
         self.system_prompt = system_prompt
         self.iterative_system_prompt = ITERATIVE_SEARCH_PROMPT
         self.perplexity_style_prompt = PERPLEXITY_STYLE_PROMPT
 
-        openai_base_url = os.environ.get("OPENAI_BASE_URL")
+        openai_base_url = config.openai.base_url
         if openai_base_url:
-            utils.set_provider_config("openai", {"base_url": openai_base_url})
+            # Suppress missing attribute in litellm.utils
+            utils.set_provider_config("openai", {"base_url": str(openai_base_url)})  # type: ignore[attr-defined]
 
     def _get_domain_from_url(self, url: str) -> str:
         """Extract just the domain name from a URL."""
@@ -123,7 +114,7 @@ class OpenDeepSearchAgent:
 
         return "\n".join(favicons)
 
-    def _filter_new_sources(self, sources_data: Dict[str, Any], visited_urls: Set[str]) -> Dict[str, Any]:
+    def _filter_new_sources(self, sources_data: Optional[Dict[str, Any]], visited_urls: Set[str]) -> Dict[str, Any]:  # type: ignore
         """
         Filter sources to only include URLs that haven't been visited yet.
 
@@ -180,7 +171,7 @@ class OpenDeepSearchAgent:
             ]
 
             analysis_response = await acompletion(
-                model=self.model, messages=analysis_messages, temperature=0.2, top_p=self.top_p
+                model=self.model, messages=analysis_messages, temperature=self.temperature, top_p=self.top_p
             )
             return analysis_response.choices[0].message.content
         except Exception as e:
@@ -271,12 +262,12 @@ class OpenDeepSearchAgent:
 
     def _update_accumulated_context(
         self,
-        accumulated_context: Dict[str, Dict[str, Any]],
+        accumulated_context: Dict[int, Dict[str, Any]],
         iteration_number: int,
         processed_data: Dict[str, Any],
         query: str,
         context_string: str,
-        analysis: str = None,
+        analysis: Optional[str] = None,
     ) -> None:
         """Update the accumulated context with new findings from this iteration."""
 
@@ -504,8 +495,8 @@ class OpenDeepSearchAgent:
             }
 
             current_query = query
-            accumulated_context = {}
-            visited_urls = set()
+            accumulated_context: Dict[int, Dict[str, Any]] = {}
+            visited_urls: Set[str] = set()
             iteration_count = 0
 
             try:

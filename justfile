@@ -84,27 +84,27 @@ compile-dev-reqs:
 # Format code using black
 format:
     @echo "Formatting code with black..."
-    black .
+    uv run black src
 
 # Lint code using ruff
 lint:
     @echo "Linting code with ruff..."
-    ruff check .
+    uv run ruff check src
 
 # Fix linting issues with ruff
 lint-fix:
     @echo "Fixing linting issues with ruff..."
-    ruff check --fix .
+    uv run ruff check --fix src
 
 # Run type checking with mypy
 type-check:
     @echo "Type checking with mypy..."
-    mypy .
+    uv run mypy src
 
 # Run security checks with bandit
 security-check:
     @echo "Running security checks with bandit..."
-    bandit -r .
+    uv run bandit -r src
 
 # Run all code quality checks
 quality-check: format lint type-check security-check
@@ -117,17 +117,17 @@ quality-check: format lint type-check security-check
 # Run tests using pytest
 test:
     @echo "Running tests..."
-    pytest
+    uv run pytest
 
 # Run tests with coverage report
 test-cov:
     @echo "Running tests with coverage..."
-    pytest --cov=. --cov-report=term --cov-report=html
+    uv run pytest --cov=. --cov-report=term --cov-report=html
 
 # Run tests in verbose mode
 test-verbose:
     @echo "Running tests in verbose mode..."
-    pytest -v
+    uv run pytest -v
 
 # =====================================================================
 # DEMO & EVALUATION
@@ -137,13 +137,13 @@ test-verbose:
 demo:
     @echo "Installing gradio demo dependencies and running gradio demo..."
     uv pip install -e ".[gradio-demo]"
-    python gradio_demo.py
+    uv run python gradio_demo.py
 
 # Run the web demo
 web-demo:
     @echo "Installing web demo dependencies and running web demo..."
     uv pip install -e ".[web-demo]"
-    python simple_web_demo.py --pro-mode
+    uv run python simple_web_demo.py --pro-mode
 
 # Run all demos (installs all demo dependencies)
 all-demos:
@@ -158,13 +158,13 @@ all-demos:
 # Build the package
 build:
     @echo "Building package..."
-    python -m build
+    uv run python -m build
 
 # Build and check the package with twine
 build-check:
     @echo "Building and checking package..."
-    python -m build
-    twine check dist/*
+    uv run python -m build
+    uv run twine check dist/*
 
 # =====================================================================
 # PRE-COMMIT HOOKS
@@ -173,12 +173,12 @@ build-check:
 # Install pre-commit hooks
 install-hooks:
     @echo "Installing pre-commit hooks..."
-    pre-commit install
+    uv run pre-commit install
 
 # Run pre-commit hooks on all files
 run-hooks:
     @echo "Running pre-commit hooks on all files..."
-    pre-commit run --all-files
+    uv run pre-commit run --all-files
 
 # =====================================================================
 # UTILITY COMMANDS
@@ -190,9 +190,9 @@ help:
 
 # Show project information
 info:
-    @echo "Python version:" && python --version
-    @echo "Virtual environment:" && which python
-    @echo "Package version:" && python -c "import importlib.metadata; print(importlib.metadata.version('OpenDeepSearch'))"
+    @echo "Python version:" && uv run python --version
+    @echo "Virtual environment:" && uv run which python
+    @echo "Package version:" && uv run python -c "import importlib.metadata; print(importlib.metadata.version('OpenDeepSearch'))"
 
 # Create a new version tag
 version tag='':

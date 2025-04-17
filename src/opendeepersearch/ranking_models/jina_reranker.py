@@ -1,9 +1,9 @@
-import os
 from typing import List, Optional
 
 import requests
 import torch
-from dotenv import load_dotenv
+
+from opendeepersearch.config import config
 
 from .base_reranker import BaseSemanticSearcher
 
@@ -22,8 +22,7 @@ class JinaReranker(BaseSemanticSearcher):
             model: Model name to use (default: "jina-embeddings-v3")
         """
         if api_key is None:
-            load_dotenv()
-            api_key = os.getenv("JINA_API_KEY")
+            api_key = config.jina.api_key
             if not api_key:
                 raise ValueError("No API key provided and JINA_API_KEY not found in environment variables")
 

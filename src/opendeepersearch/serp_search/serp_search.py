@@ -1,9 +1,10 @@
-import os
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import Any, Dict, Generic, List, Optional, TypeVar
 
 import requests
+
+from opendeepersearch.config import config
 
 T = TypeVar("T")
 
@@ -38,10 +39,15 @@ class SerperConfig:
     @classmethod
     def from_env(cls) -> "SerperConfig":
         """Create config from environment variables"""
-        api_key = os.getenv("SERPER_API_KEY")
+        api_key = config.serper.api_key
         if not api_key:
-            raise SerperAPIError("SERPER_API_KEY environment variable not set")
-        return cls(api_key=api_key)
+            raise SerperAPIError("SERPER_API_KEY not configured in environment or .env file")
+        return cls(
+            api_key=api_key,
+            api_url=str(config.serper.api_url),
+            default_location=config.serper.location,
+            timeout=config.serper.timeout,
+        )
 
 
 @dataclass
@@ -56,11 +62,16 @@ class SearXNGConfig:
     @classmethod
     def from_env(cls) -> "SearXNGConfig":
         """Create config from environment variables"""
-        instance_url = os.getenv("SEARXNG_INSTANCE_URL")
+        instance_url = config.searxng.instance_url
         if not instance_url:
-            raise SearXNGError("SEARXNG_INSTANCE_URL environment variable not set")
-        api_key = os.getenv("SEARXNG_API_KEY")
-        return cls(instance_url=instance_url, api_key=api_key)
+            raise SearXNGError("SEARXNG_INSTANCE_URL not configured in environment or .env file")
+        api_key = config.searxng.api_key
+        return cls(
+            instance_url=str(instance_url),
+            api_key=api_key,
+            default_location=config.searxng.location,
+            timeout=config.searxng.timeout,
+        )
 
 
 class SearchResult(Generic[T]):
@@ -88,11 +99,20 @@ class SearchAPI(ABC):
 
 
 class SerperAPI(SearchAPI):
-    def __init__(self, api_key: Optional[str] = None, config: Optional[SerperConfig] = None):
-        if api_key:
-            self.config = SerperConfig(api_key=api_key)
+    def __init__(self, api_key: Optional[str] = None, config_override: Optional[SerperConfig] = None):
+        if config_override:
+            self.config = config_override
+        elif api_key:
+            # If only api_key is provided, create config using it and defaults from global config
+            self.config = SerperConfig(
+                api_key=api_key,
+                api_url=str(config.serper.api_url),
+                default_location=config.serper.location,
+                timeout=config.serper.timeout,
+            )
         else:
-            self.config = config or SerperConfig.from_env()
+            # Default: load everything from global config/env
+            self.config = SerperConfig.from_env()
 
         self.headers = {"X-API-KEY": self.config.api_key, "Content-Type": "application/json"}
 

@@ -2,11 +2,12 @@
 # flake8: noqa: E501
 
 import json
-from typing import List
+from typing import List, Optional  # Added Optional
 
 import requests
 import torch
 
+from opendeepersearch.config import config  # Added config import
 from opendeepersearch.ranking_models.base_reranker import BaseSemanticSearcher
 
 
@@ -47,7 +48,7 @@ class InfinitySemanticSearcher(BaseSemanticSearcher):
 
     def __init__(
         self,
-        embedding_endpoint: str = "http://localhost:7997/embeddings",
+        embedding_endpoint: Optional[str] = None,  # Changed to Optional[str] = None
         model_name: str = "Alibaba-NLP/gte-Qwen2-7B-instruct",
         instruction_prefix: str = "Instruct: Given a web search query, retrieve relevant passages that answer the query\nQuery: ",
     ):
@@ -59,7 +60,8 @@ class InfinitySemanticSearcher(BaseSemanticSearcher):
             model_name: Name of the embedding model available in Infinity API
             instruction_prefix: Prefix to add to queries for better search relevance
         """
-        self.embedding_endpoint = embedding_endpoint
+        # Use provided endpoint or fall back to config default
+        self.embedding_endpoint = embedding_endpoint or str(config.infinity.endpoint)
         self.model_name = model_name
         self.instruction_prefix = instruction_prefix
 

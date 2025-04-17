@@ -2,7 +2,6 @@
 Contains the StrategyFactory class for creating various extraction strategies.
 """
 
-import os
 from typing import Optional
 
 from crawl4ai.extraction_strategy import (
@@ -12,6 +11,8 @@ from crawl4ai.extraction_strategy import (
     LLMExtractionStrategy,
     NoExtractionStrategy,
 )
+
+from opendeepersearch.config import config
 
 
 class StrategyFactory:
@@ -25,7 +26,7 @@ class StrategyFactory:
         return LLMExtractionStrategy(
             input_format=input_format,
             provider="openrouter/google/gemini-2.0-flash-lite-001",
-            api_token=os.getenv("OPENROUTER_API_KEY"),
+            api_token=config.openrouter.api_key,
             instruction=instruction,
         )
 

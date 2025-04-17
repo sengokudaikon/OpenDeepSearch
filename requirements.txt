@@ -191,6 +191,7 @@ pycparser==2.22
     # via cffi
 pydantic==2.10.6
     # via
+    #   opendeepersearch (pyproject.toml)
     #   crawl4ai
     #   langchain
     #   langchain-core
@@ -211,6 +212,7 @@ python-dateutil==2.9.0.post0
     # via pandas
 python-dotenv==1.1.0
     # via
+    #   opendeepersearch (pyproject.toml)
     #   crawl4ai
     #   litellm
     #   smolagents
@@ -250,8 +252,6 @@ rpds-py==0.24.0
     # via
     #   jsonschema
     #   referencing
-setuptools==78.1.0
-    # via torch
 six==1.17.0
     # via
     #   markdownify

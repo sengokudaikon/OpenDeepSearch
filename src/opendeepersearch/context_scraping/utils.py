@@ -102,10 +102,10 @@ def predict_educational_value(text_list: List[str]) -> List[float]:
     text_list = [replace_newlines(text) for text in text_list]
     pred = model.predict(text_list, k=-1)
     score_list = []
-    for l, s in zip(*pred):
+    for labels, scores in zip(*pred):
         score = 0
-        for _l, _s in zip(l, s):
-            score += score_dict[_l] * _s
+        for label, prob in zip(labels, scores):
+            score += score_dict[label] * prob
         score_list.append(float(score))
     return score_list
 
