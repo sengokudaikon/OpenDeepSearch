@@ -1,5 +1,4 @@
 version = 1
-revision = 1
 requires-python = ">=3.10"
 resolution-markers = [
     "python_full_version >= '3.13'",
@@ -2086,6 +2085,7 @@ dev = [
     { name = "fasttext-wheel" },
     { name = "gradio" },
     { name = "jinja2" },
+    { name = "litellm" },
     { name = "mypy" },
     { name = "openai" },
     { name = "pillow" },
@@ -2141,6 +2141,7 @@ requires-dist = [
     { name = "jinja2", marker = "extra == 'web-demo'", specifier = ">=3.1.3" },
     { name = "langchain", specifier = ">=0.3.19" },
     { name = "litellm", specifier = ">=1.61.20" },
+    { name = "litellm", marker = "extra == 'dev'" },
     { name = "loguru" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.9.0" },
     { name = "openai", marker = "extra == 'dev'", specifier = ">=1.66.2" },
@@ -2169,7 +2170,6 @@ requires-dist = [
     { name = "wikipedia-api", marker = "extra == 'evals'", specifier = ">=0.8.1" },
     { name = "wolframalpha", marker = "extra == 'dev'" },
 ]
-provides-extras = ["dev", "evals", "demo", "gradio-demo", "web-demo"]
 
 [[package]]
 name = "orjson"

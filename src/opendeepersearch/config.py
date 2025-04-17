@@ -122,10 +122,17 @@ class SearchSettings(BaseSettings):
     max_iterations: int = Field(default=3, ge=1)
     max_sources_per_iteration: int = Field(default=10, ge=1)
 
+    num_serp_results_fetch: int = Field(default=30, ge=1)
+    num_sources_pre_filter: int = Field(default=10, ge=1)
+    pre_filtering_model_id: Optional[str] = Field(default=None)
+
     @field_validator("max_sources")
     @classmethod
-    def max_sources_ge_min_sources(cls, v: int, values: dict) -> int:
-        min_sources = values.get("min_sources")  # type: ignore
+    def max_sources_ge_min_sources(cls, v: int, info) -> int:
+        """
+        Ensure max_sources is not less than min_sources.
+        """
+        min_sources = info.data.get("min_sources")
         if isinstance(min_sources, int) and v < min_sources:
             raise ValueError("max_sources must be greater than or equal to min_sources")
         return v
@@ -139,8 +146,11 @@ class ChunkingSettings(BaseSettings):
 
     @field_validator("overlap")
     @classmethod
-    def overlap_lt_size(cls, v: int, values: dict) -> int:
-        size = values.get("size")  # type: ignore
+    def overlap_lt_size(cls, v: int, info) -> int:
+        """
+        Ensure overlap is less than size.
+        """
+        size = info.data.get("size")
         if isinstance(size, int) and v >= size:
             raise ValueError("overlap must be less than size")
         return v

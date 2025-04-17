@@ -1,6 +1,8 @@
 import asyncio
+import json
+import logging
 import re
-from typing import Any, AsyncGenerator, Dict, List, Literal, Optional, Set
+from typing import Any, AsyncGenerator, Dict, List, Literal, Optional, Set, Tuple
 from urllib.parse import urlparse
 
 from litellm import acompletion, utils
@@ -11,9 +13,13 @@ from opendeepersearch.context_building.process_sources_pro import SourceProcesso
 from opendeepersearch.prompts import (
     ITERATIVE_SEARCH_PROMPT,
     PERPLEXITY_STYLE_PROMPT,
+    PLANNING_PROMPT,
+    PRE_FILTERING_PROMPT,
     SEARCH_SYSTEM_PROMPT,
 )
 from opendeepersearch.serp_search.serp_search import SearchResult, create_search_api
+
+logger = logging.getLogger(__name__)
 
 
 class OpenDeepSearchAgent:
@@ -28,7 +34,7 @@ class OpenDeepSearchAgent:
         source_processor_config: Optional[Dict[str, Any]] = None,
         temperature: Optional[float] = None,
         top_p: Optional[float] = None,
-        reranker: Optional[str] = "None",
+        reranker: Optional[str] = "jina",
     ):
         """
         Initialize an OpenDeepSearch agent that combines web search, content processing, and LLM capabilities.
@@ -78,10 +84,11 @@ class OpenDeepSearchAgent:
         self.system_prompt = system_prompt
         self.iterative_system_prompt = ITERATIVE_SEARCH_PROMPT
         self.perplexity_style_prompt = PERPLEXITY_STYLE_PROMPT
+        self.orchestrator_model = config.litellm.orchestrator_model_id or self.model
+        self.planning_prompt_template = PLANNING_PROMPT
 
         openai_base_url = config.openai.base_url
         if openai_base_url:
-            # Suppress missing attribute in litellm.utils
             utils.set_provider_config("openai", {"base_url": str(openai_base_url)})  # type: ignore[attr-defined]
 
     def _get_domain_from_url(self, url: str) -> str:
@@ -150,34 +157,55 @@ class OpenDeepSearchAgent:
         self,
         original_query: str,
         current_query: str,
-        accumulated_context: Dict[str, Dict[str, Any]],
+        accumulated_context: Dict[int, Dict[str, Any]],
+        iteration_count: int,
+        max_iterations: int,
+        research_plan: str,
     ) -> str:
-        """Generate an analysis of current findings when no new sources are found."""
+        """Generate an analysis when no new sources are found, considering the plan."""
         current_summary = self._summarize_context(accumulated_context)
 
         try:
+            analysis_prompt = f"""
+Original User Query: '{original_query}'
+Research Plan:
+{research_plan}
+
+Current Iteration ({iteration_count}/{max_iterations}) Search Query: '{current_query}'
+
+My search for '{current_query}' did not yield any *new* relevant sources.
+I need to decide whether the Research Plan is sufficiently covered or requires further search.
+
+Summary of Previously Gathered Findings:
+{current_summary}
+
+Instructions:
+1. Compare the 'Summary of Previously Gathered Findings' against each sub-question in the 'Research Plan'.
+2. Decide if all plan points are addressed:
+   - If yes, conclude with JSON: {{"action": "synthesize"}}
+   - If not, identify the most critical unanswered sub-question and conclude with JSON: {{"action": "search", "query": "your specific next search query targeting that sub-question"}}
+3. Always end your response with the exact JSON decision object on its own line.
+
+Respond with reasoning, then output the JSON decision.
+"""
             analysis_messages = [
-                {
-                    "role": "system",
-                    "content": "You are a research analysis assistant helping determine next steps.",
-                },
-                {
-                    "role": "user",
-                    "content": f"Initial Query: {original_query}\nCurrent Query: {current_query}\n\nNo new sources were found for the current query."
-                    f" Based on our previous findings, analyze what we know and what gaps remain."
-                    f" Suggest whether we should: (1) try a different search query (and what it should be), or (2) proceed to final synthesis with what we have.\n"
-                    f"\nPrevious Findings Summary:\n{current_summary}",
-                },
+                {"role": "system", "content": self.perplexity_style_prompt},
+                {"role": "user", "content": analysis_prompt},
             ]
 
             analysis_response = await acompletion(
-                model=self.model, messages=analysis_messages, temperature=self.temperature, top_p=self.top_p
+                model=self.orchestrator_model,
+                messages=analysis_messages,
+                temperature=self.temperature,
+                top_p=self.top_p,
             )
             return analysis_response.choices[0].message.content
         except Exception as e:
-            print(f"Error analyzing current findings: {e}")
+            logger.error(f"Error analyzing current findings when no new sources found: {e}")
             return (
-                "Error analyzing current findings. Recommend proceeding to final synthesis with available information."
+                "Error during analysis. Based on the lack of new sources, "
+                "I will proceed to synthesize with the information gathered so far.\n"
+                '{"action": "synthesize"}'
             )
 
     def _summarize_context(self, accumulated_context: Dict[str, Any]) -> str:
@@ -213,53 +241,6 @@ class OpenDeepSearchAgent:
 
         return "\n\n".join(summary_parts)
 
-    def _extract_next_action(self, analysis_content: str) -> str:
-        """Parse the LLM analysis to extract the next search query or action."""
-
-        stop_indicators = [
-            "SYNTHESIZE_FINAL",
-            "sufficient information gathered",
-            "enough information",
-            "information is complete",
-            "We can now provide a final answer",
-        ]
-
-        for indicator in stop_indicators:
-            if indicator in analysis_content:
-                return "SYNTHESIZE_FINAL"
-
-        query_markers = [
-            r"Next search query: [\"']?([^\"'\n]+)[\"']?",
-            r"Next query: [\"']?([^\"'\n]+)[\"']?",
-            r"For the next iteration, search for: [\"']?([^\"'\n]+)[\"']?",
-            r"Follow-up query: [\"']?([^\"'\n]+)[\"']?",
-            r"Next, we should search for [\"']?([^\"'\n]+)[\"']?",
-        ]
-
-        for marker in query_markers:
-            match = re.search(marker, analysis_content)
-            if match:
-                return match.group(1).strip()
-
-        if any(
-            phrase in analysis_content
-            for phrase in [
-                "need more information",
-                "additional research",
-                "further details",
-                "explore further",
-            ]
-        ):
-
-            topics_match = re.search(
-                r"(need|should|could) (search|research|explore|investigate|find out|learn) (about|on|for|more about) ([^.]+)",
-                analysis_content,
-            )
-            if topics_match:
-                return topics_match.group(4).strip()
-
-        return ""
-
     def _update_accumulated_context(
         self,
         accumulated_context: Dict[int, Dict[str, Any]],
@@ -268,6 +249,7 @@ class OpenDeepSearchAgent:
         query: str,
         context_string: str,
         analysis: Optional[str] = None,
+        conflicts: Optional[List[str]] = None,
     ) -> None:
         """Update the accumulated context with new findings from this iteration."""
 
@@ -280,51 +262,53 @@ class OpenDeepSearchAgent:
 
         accumulated_context[iteration_number]["context"] = context_string
         accumulated_context[iteration_number]["query"] = query
+        accumulated_context[iteration_number]["conflicts"] = conflicts or []
 
         if analysis:
-
-            findings_match = re.search(
-                r"(?:Key findings|Key insights|Main points|Summary of findings)(.*?)(?:Next steps|Further research|Follow-up|$)",
-                analysis,
-                re.DOTALL | re.IGNORECASE,
+            json_start = analysis.rfind('{"action"')
+            conversational = analysis[:json_start].strip() if json_start != -1 else analysis.strip()
+            accumulated_context[iteration_number]["key_findings"] = (
+                conversational if conversational else "Analysis resulted in decision only."
             )
 
-            if findings_match:
-                key_findings = findings_match.group(1).strip()
-                accumulated_context[iteration_number]["key_findings"] = key_findings
-            else:
-
-                accumulated_context[iteration_number]["key_findings"] = analysis
-
-    def _build_final_context(self, accumulated_context: Dict[str, Dict[str, Any]]) -> str:
-        """Build a comprehensive context string from all accumulated findings for final synthesis."""
+    def _build_final_context(
+        self, accumulated_context: Dict[int, Dict[str, Any]], research_plan: Optional[str] = None
+    ) -> str:
+        """Build a comprehensive context string including conflicts for final synthesis."""
         if not accumulated_context:
             return ""
 
-        context_parts = []
+        context_parts: List[str] = []
+        all_conflicts: List[str] = []
 
-        context_parts.append("# SUMMARY OF RESEARCH\n")
+        for data in accumulated_context.values():
+            if conflicts := data.get("conflicts"):
+                all_conflicts.extend(conflicts)
+
+        if research_plan:
+            context_parts.append("# INITIAL RESEARCH PLAN")
+            context_parts.append(research_plan)
+            context_parts.append("")
+
+        context_parts.append("# SUMMARY OF RESEARCH FINDINGS")
         context_parts.append(self._summarize_context(accumulated_context))
-
-        context_parts.append("\n\n# DETAILED FINDINGS\n")
-
-        for iteration, data in sorted(accumulated_context.items()):
-            if "query" in data and "context" in data:
-                context_parts.append(f"\n## Iteration {iteration}: '{data['query']}'\n")
-
-                context_content = data["context"]
-                if len(context_content) > 2000:
-                    context_content = context_content[:2000] + "...\n[Content truncated for brevity]"
-
-                context_parts.append(context_content)
-
-                if "sources" in data and data["sources"]:
-                    context_parts.append("\nSources for this iteration:")
-                    for i, source in enumerate(data["sources"][:5]):
-                        title = source.get("title", "Unknown")
-                        link = source.get("link", "#")
-                        context_parts.append(f"- [{title}]({link})")
-
+        if all_conflicts:
+            unique = sorted(set(all_conflicts))
+            context_parts.append("# POTENTIAL CONFLICTS / DISCREPANCIES NOTED")
+            for c in unique:
+                context_parts.append(f"- {c}")
+            context_parts.append("")
+        context_parts.append("# DETAILED FINDINGS BY ITERATION")
+        for i, data in sorted(accumulated_context.items()):
+            context_parts.append(f"## Iteration {i}: '{data.get('query','')}'")
+            if content := data.get("context"):
+                snippet = content if len(content) <= 1500 else content[:1500] + "... [truncated]"
+                context_parts.append(snippet)
+            if sources := data.get("sources"):
+                context_parts.append("Sources:")
+                for s in sources[:3]:
+                    if isinstance(s, dict):
+                        context_parts.append(f"- [{s.get('title','')}]({s.get('link','#')})")
         return "\n".join(context_parts)
 
     def _extract_final_sources(self, accumulated_context: Dict[str, Dict[str, Any]]) -> List[Dict[str, Any]]:
@@ -346,11 +330,11 @@ class OpenDeepSearchAgent:
     async def ask(
         self,
         query: str,
-        max_sources: int = 3,
-        min_sources: int = 1,
-        pro_mode: bool = False,
-        max_iterations: int = 3,
-        max_sources_per_iteration: int = 10,
+        max_sources: Optional[int] = None,
+        min_sources: Optional[int] = None,
+        pro_mode: Optional[bool] = None,
+        max_iterations: Optional[int] = None,
+        max_sources_per_iteration: Optional[int] = None,
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """
         Searches for information, generates an AI response, yielding intermediate steps and sources.
@@ -361,19 +345,39 @@ class OpenDeepSearchAgent:
 
         Args:
             query (str): The question or query to answer.
-            max_sources (int, default=3): Maximum number of sources to include in the context for normal mode.
-            min_sources (int, default=1): Minimum number of unique sources to include. If greater
+            max_sources (int, optional): Maximum number of sources to include in the context for normal mode.
+            min_sources (int, optional): Minimum number of unique sources to include. If greater
                 than 0, forces the model to search for at least this many unique sources.
-            pro_mode (bool, default=False): When enabled, performs deep research mode with
+            pro_mode (bool, optional): When enabled, performs deep research mode with
                 iterative search workflow and transparent reasoning in a conversational style.
-            max_iterations (int, default=3): Maximum number of search iterations to perform in deep research mode.
-            max_sources_per_iteration (int, default=10): Maximum number of sources to process per iteration in deep research mode.
+            max_iterations (int, optional): Maximum number of search iterations to perform in deep research mode.
+            max_sources_per_iteration (int, optional): Maximum number of sources to process per iteration in deep research mode.
 
         Yields:
             Dict[str, Any]: Dictionaries representing intermediate steps or the final result.
                 Possible types: "status", "sources_found", "final_answer", "thought", etc.
         """
-        if not pro_mode:
+        effective_min_sources = min_sources if min_sources is not None else config.search.min_sources
+        effective_max_sources = max_sources if max_sources is not None else config.search.max_sources
+        effective_pro_mode = pro_mode if pro_mode is not None else config.search.pro_mode
+        effective_max_iterations = max_iterations if max_iterations is not None else config.search.max_iterations
+        effective_max_sources_per_iteration = (
+            max_sources_per_iteration
+            if max_sources_per_iteration is not None
+            else config.search.max_sources_per_iteration
+        )
+
+        if effective_max_sources < effective_min_sources:
+            raise ValueError(
+                f"max_sources ({effective_max_sources}) cannot be less than min_sources ({effective_min_sources})"
+            )
+
+        logger.info(
+            f"Effective search settings: min_sources={effective_min_sources}, "
+            f"max_sources={effective_max_sources}, pro_mode={effective_pro_mode}"
+        )
+
+        if not effective_pro_mode:
 
             yield {"type": "status", "content": "Starting research (standard mode)..."}
 
@@ -418,10 +422,10 @@ class OpenDeepSearchAgent:
 
             async for update in self.source_processor.process_sources(
                 initial_sources,
-                max_sources,
+                effective_max_sources,
                 query,
                 False,
-                min_sources,
+                effective_min_sources,
             ):
                 if update.get("type") == "processed_sources":
                     processed_sources_data = update.get("data", {})
@@ -488,44 +492,52 @@ class OpenDeepSearchAgent:
             }
 
         else:
-
             yield {
                 "type": "thought",
                 "content": "I'll start my research on this topic with a systematic approach, searching for information, analyzing sources, and iteratively refining my search based on what I learn.",
             }
+            yield {"type": "status", "content": "Generating initial research plan..."}
+            research_plan = ""
+            try:
+                plan_prompt = self.planning_prompt_template.format(user_query=query)
+                plan_resp = await acompletion(
+                    model=self.orchestrator_model,
+                    messages=[{"role": "user", "content": plan_prompt}],
+                    temperature=0.1,
+                    top_p=0.5,
+                )
+                plan_text = plan_resp.choices[0].message.content
+                match = re.search(r"Research Plan:\s*\n(.*)$", plan_text, re.DOTALL)
+                research_plan = match.group(1).strip() if match else plan_text.strip()
+                yield {"type": "research_plan", "content": research_plan}
+            except Exception as e:
+                logger.warning(f"Could not generate research plan: {e}")
+                yield {"type": "warning", "content": f"Proceeding without plan: {e}"}
+                research_plan = ""
 
+            original_query = query
             current_query = query
             accumulated_context: Dict[int, Dict[str, Any]] = {}
             visited_urls: Set[str] = set()
             iteration_count = 0
 
-            try:
-                planning_prompt = (
-                    f"Based on the query '{query}', what would be a good systematic research approach?"
-                    f" Consider what initial search terms would be most effective, what types of sources might have reliable information, and what sub-questions we might need to explore."
-                    f" Respond in a conversational first-person style as if you're thinking out loud about your research strategy."
-                )
-
-                plan_messages = [
-                    {"role": "system", "content": self.perplexity_style_prompt},
-                    {"role": "user", "content": planning_prompt},
-                ]
-
-                plan_response = await acompletion(model=self.model, messages=plan_messages, temperature=0.3, top_p=0.8)
-
-                initial_plan = plan_response.choices[0].message.content
-                yield {"type": "thought", "content": initial_plan}
-            except Exception as e:
-                yield {"type": "warning", "content": f"Could not generate initial plan: {e}"}
-
-            while iteration_count < max_iterations:
+            while True:
                 iteration_count += 1
+                if iteration_count > effective_max_iterations:
+                    yield {
+                        "type": "thought",
+                        "content": f"Reached maximum iteration limit ({effective_max_iterations}). Proceeding to synthesis.",
+                    }
+                    yield {"type": "status", "content": f"Max iterations ({effective_max_iterations}) reached."}
+                    break
 
                 yield {"type": "thought", "content": f'*Searching*\n"{current_query}"'}
 
                 try:
                     sources_result: SearchResult[Dict[str, Any]] = await asyncio.to_thread(
-                        self.serp_search.get_sources, current_query
+                        self.serp_search.get_sources,
+                        current_query,
+                        config.search.num_serp_results_fetch,
                     )
                 except Exception as e:
                     yield {
@@ -542,36 +554,52 @@ class OpenDeepSearchAgent:
                     continue
 
                 new_sources_data = self._filter_new_sources(sources_result.data, visited_urls)
-                if not new_sources_data or not new_sources_data.get("organic"):
-                    yield {
-                        "type": "thought",
-                        "content": f"My search for '{current_query}' didn't yield any new relevant sources. I'll need to refine my approach.",
-                    }
-
-                    analysis_content = await self._analyze_current_findings(query, current_query, accumulated_context)
-                    yield {"type": "thought", "content": analysis_content}
-
-                    next_query_or_action = self._extract_next_action(analysis_content)
-                    if next_query_or_action == "SYNTHESIZE_FINAL":
-                        break
-                    elif next_query_or_action:
-                        current_query = next_query_or_action
-                        continue
+                unvisited_results = new_sources_data.get("organic", []) or []
+                yield {"type": "status", "content": f"Evaluating {len(unvisited_results)} potential sources..."}
+                formatted_results = "\n".join(
+                    [
+                        f"Title: {s.get('title','')}\nURL: {s.get('link','')}\nSnippet: {s.get('snippet','')}"
+                        for s in unvisited_results
+                    ]
+                )
+                pre_filter_prompt = PRE_FILTERING_PROMPT.format(
+                    query=original_query,
+                    num_sources=config.search.num_sources_pre_filter,
+                    results=formatted_results,
+                )
+                try:
+                    pf_response = await acompletion(
+                        model=config.search.pre_filtering_model_id or self.orchestrator_model,
+                        messages=[{"role": "user", "content": pre_filter_prompt}],
+                        temperature=self.temperature,
+                        top_p=self.top_p,
+                    )
+                    match = re.search(r"(\[.*\])", pf_response.choices[0].message.content, re.DOTALL)
+                    if match:
+                        selected_urls = json.loads(match.group(1))
                     else:
-
-                        break
-
-                source_urls = [s for s in new_sources_data.get("organic", []) if s.get("link")]
-                visited_urls.update([s.get("link") for s in source_urls if s.get("link")])
-
-                favicons_list = self._format_sources_as_favicons(source_urls)
+                        raise ValueError("No JSON list found in pre-filter response")
+                except Exception as e:
+                    logger.warning(f"Pre-filtering failed: {e}")
+                    selected_urls = [s.get("link") for s in unvisited_results[: config.search.num_sources_pre_filter]]
+                filtered_sources_for_scraping = [s for s in unvisited_results if s.get("link") in selected_urls]
+                if not filtered_sources_for_scraping:
+                    filtered_sources_for_scraping = unvisited_results[: config.search.num_sources_pre_filter]
+                # Enforce max sources per iteration
+                filtered_sources_for_scraping = filtered_sources_for_scraping[:effective_max_sources_per_iteration]
+                yield {
+                    "type": "status",
+                    "content": f"Selected {len(filtered_sources_for_scraping)} sources for scraping (max: {effective_max_sources_per_iteration}).",
+                }
+                visited_urls.update([s.get("link") for s in filtered_sources_for_scraping if s.get("link")])
+                filtered_sources_data = {"organic": filtered_sources_for_scraping}
+                favicons_list = self._format_sources_as_favicons(filtered_sources_for_scraping)
                 yield {"type": "thought", "content": f"*Reading*\n{favicons_list}"}
-
                 processed_iteration_data = {}
                 try:
                     async for update in self.source_processor.process_sources(
-                        SearchResult(data=new_sources_data),
-                        max_sources_per_iteration,
+                        SearchResult(data=filtered_sources_data),
+                        len(filtered_sources_for_scraping),
                         current_query,
                         True,
                         min_sources=1,
@@ -587,7 +615,7 @@ class OpenDeepSearchAgent:
                     continue
 
                 iteration_context_string = build_context(processed_iteration_data)
-                if not iteration_context_string.strip():
+                if not iteration_context_string or not iteration_context_string.strip():
                     yield {
                         "type": "thought",
                         "content": "I wasn't able to extract useful content from these sources. Let me try a different approach.",
@@ -598,35 +626,43 @@ class OpenDeepSearchAgent:
                     previous_findings_summary = self._summarize_context(accumulated_context)
 
                     analysis_prompt = f"""
-                    Based on the information I've gathered so far about the query '{query}', I need to analyze what I've just learned.
-                    
-                    Previous findings summary:
+                    Original User Query: '{original_query}'
+                    Current Iteration ({iteration_count}/{effective_max_iterations}) Search Query: '{current_query}'
+
+                    My research goal is to comprehensively answer the Original User Query.
+                    I need to analyze the latest findings and decide the next step.
+
+                    Summary of Previous Findings:
                     {previous_findings_summary}
-                    
-                    New information from latest search:
+
+                    New Information Found in This Iteration:
                     {iteration_context_string}
-                    
-                    Please help me:
-                    1. Analyze what I've learned
-                    2. Identify gaps or inconsistencies
-                    3. Determine what follow-up information I need
-                    4. Suggest a specific next search query or indicate if I have sufficient information
-                    
-                    Respond as if you are me thinking out loud in a conversational tone, similar to how Perplexity shows its reasoning.
+
+                    Instructions:
+                    1. Analyze the 'New Information' in the context of the 'Original User Query'. How does it contribute?
+                    2. Evaluate the 'Summary of Previous Findings' combined with the 'New Information'. Is the accumulated knowledge sufficient to provide a complete and accurate answer to the 'Original User Query'?
+                    3. Identify the most critical remaining knowledge gaps or inconsistencies preventing a full answer.
+                    4. **Decision Time:**
+                       - If the information IS sufficient, conclude *only* with: SYNTHESIZE_FINAL
+                       - If NOT sufficient, propose a *specific* next search query. Conclude *only* with: Next Query: "your query"
+                       - If struggling after several attempts, you may conclude *only* with: SYNTHESIZE_FINAL
+
+                    Respond conversationally with your analysis.
+                    CRITICAL: After conversational analysis, you MUST provide the final decision JSON object (`{{"action": "search", "query": "."}}` or `{{"action": "synthesize"}}`) as the *absolute final part* of your response, on its own line(s), with no preceding or succeeding text on that line.
                     """
 
                     analysis_messages = [
                         {"role": "system", "content": self.perplexity_style_prompt},
                         {"role": "user", "content": analysis_prompt},
                     ]
-
                     analysis_response = await acompletion(
                         model=self.model, messages=analysis_messages, temperature=0.3, top_p=0.8
                     )
-
                     analysis_content = analysis_response.choices[0].message.content
                     yield {"type": "thought", "content": analysis_content}
 
+                    logger.debug(f"Full analysis content received:\n{analysis_content}")
+                    action, next_query, conflicts = self._parse_action_json(analysis_content)
                     self._update_accumulated_context(
                         accumulated_context,
                         iteration_count,
@@ -634,77 +670,45 @@ class OpenDeepSearchAgent:
                         current_query,
                         iteration_context_string,
                         analysis_content,
+                        conflicts,
                     )
+                    logger.debug(f"Parsed action: {action}, Parsed query: {next_query}, Parsed conflicts: {conflicts}")
 
-                    next_query_or_action = self._extract_next_action(analysis_content)
-
-                    if next_query_or_action == "SYNTHESIZE_FINAL":
-                        yield {"type": "thought", "content": "*Writing research report*"}
+                    if action == "synthesize":
+                        yield {
+                            "type": "thought",
+                            "content": "Analysis indicates research is complete. Proceeding to synthesis.",
+                        }
                         break
-                    elif next_query_or_action:
-                        current_query = next_query_or_action
-                    else:
-
-                        try:
-                            refine_prompt = f"""
-                            Based on my research so far on '{query}', I need to determine what to search for next.
-                            
-                            What I've learned so far:
-                            {self._summarize_context(accumulated_context)}
-                            
-                            What specific information should I search for next to better answer the original question? 
-                            Respond in first person as if you are me deciding what to search for next. 
-                            End your response with the exact search query in quotes, e.g., "search query here".
-                            """
-
-                            refine_messages = [
-                                {"role": "system", "content": self.perplexity_style_prompt},
-                                {"role": "user", "content": refine_prompt},
-                            ]
-
-                            refine_response = await acompletion(
-                                model=self.model,
-                                messages=refine_messages,
-                                temperature=0.3,
-                                top_p=0.8,
-                            )
-
-                            refine_content = refine_response.choices[0].message.content
-
-                            query_match = re.search(r'"([^"]+)"', refine_content)
-                            if query_match:
-                                current_query = query_match.group(1)
-
-                            else:
-
-                                sentences = re.split(r"[.!?]", refine_content)
-                                if sentences and len(sentences) > 0:
-                                    best_sentence = max(sentences, key=len)
-                                    current_query = best_sentence.strip()
-                                    if len(current_query) < 10:
-                                        current_query = f"more information about {query}"
-
-                        except Exception as e:
-                            yield {"type": "warning", "content": f"Error refining query: {e}"}
+                    elif action == "search" and next_query:
+                        if next_query.strip().lower() != current_query.strip().lower():
+                            current_query = next_query
+                        else:
                             yield {
-                                "type": "thought",
-                                "content": "I'm having trouble determining what to search for next. I'll try a more general search to continue my research.",
+                                "type": "warning",
+                                "content": "Proposed next query is the same as the current one. Breaking loop to synthesize.",
                             }
-                            current_query = f"latest information about {query}"
+                            break
+                    else:
+                        yield {
+                            "type": "warning",
+                            "content": "Could not determine next action from analysis. Proceeding to synthesis.",
+                        }
+                        break
 
                 except Exception as e:
+                    yield {"type": "error", "content": f"Error during iteration {iteration_count} analysis: {e}"}
                     yield {
-                        "type": "error",
-                        "content": f"Error during iteration {iteration_count} analysis: {e}",
+                        "type": "thought",
+                        "content": "Error during analysis, proceeding to synthesis with available data.",
                     }
-
-                    continue
+                    break
 
             yield {
                 "type": "thought",
                 "content": "Now I'll synthesize all the information I've gathered into a comprehensive answer.",
             }
-            final_context_string = self._build_final_context(accumulated_context)
+            final_context_string = self._build_final_context(accumulated_context, research_plan)
 
             if not final_context_string.strip():
                 yield {
@@ -740,3 +744,38 @@ class OpenDeepSearchAgent:
                 yield {"type": "final_answer", "answer": final_answer, "sources": final_sources}
             except Exception as e:
                 yield {"type": "error", "content": f"Error during final synthesis: {e}"}
+
+    def _parse_action_json(self, analysis_content: str) -> Tuple[Optional[str], Optional[str], List[str]]:
+        """
+        Attempts to parse the final JSON action block from the LLM analysis.
+
+        Args:
+            analysis_content: The full text response from the LLM.
+
+        Returns:
+            A tuple (action, query, conflicts). 'action' is "search" or "synthesize"; 'query' is next search query or None; 'conflicts' is a list of identified conflicts.
+        """
+        try:
+            json_match = re.search(r'{\s*"action".*?}\s*$', analysis_content, re.DOTALL | re.MULTILINE)
+            if not json_match:
+                logger.debug("No JSON action block found.")
+                return None, None, []
+            json_str = json_match.group(0).strip()
+            logger.debug(f"Attempting to parse JSON action: {json_str}")
+            data = json.loads(json_str)
+            action = data.get("action")
+            conflicts = data.get("conflicts_found", [])
+            if not isinstance(conflicts, list) or not all(isinstance(c, str) for c in conflicts):
+                logger.warning(f"Invalid conflicts format: {conflicts}")
+                conflicts = []
+            if action == "search":
+                return "search", data.get("query"), conflicts
+            if action == "synthesize":
+                return "synthesize", None, conflicts
+            logger.warning(f"Unknown action type: {action}")
+            return None, None, conflicts
+        except json.JSONDecodeError as e:
+            logger.warning(f"Failed parsing JSON action: {e}")
+        except Exception as e:
+            logger.error(f"Unexpected error during JSON parsing: {e}")
+        return None, None, []

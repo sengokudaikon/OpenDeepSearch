@@ -78,7 +78,9 @@ class InfinitySemanticSearcher(BaseSemanticSearcher):
 
         formatted_texts = [self.instruction_prefix + text if embedding_type == "query" else text for text in texts]
 
-        response = requests.post(self.embedding_endpoint, json={"model": self.model_name, "input": formatted_texts})
+        response = requests.post(
+            self.embedding_endpoint, json={"model": self.model_name, "input": formatted_texts}, timeout=10
+        )
 
         content_str = response.content.decode("utf-8")
         content_json = json.loads(content_str)

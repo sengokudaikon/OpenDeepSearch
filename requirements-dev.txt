@@ -348,8 +348,11 @@ pydantic==2.10.6
     #   langsmith
     #   litellm
     #   openai
+    #   pydantic-settings
 pydantic-core==2.27.2
     # via pydantic
+pydantic-settings==2.8.1
+    # via opendeepersearch (pyproject.toml)
 pydub==0.25.1
     # via gradio
 pyee==12.1.1
@@ -378,6 +381,7 @@ python-dotenv==1.1.0
     #   opendeepersearch (pyproject.toml)
     #   crawl4ai
     #   litellm
+    #   pydantic-settings
     #   smolagents
 python-multipart==0.0.20
     # via gradio

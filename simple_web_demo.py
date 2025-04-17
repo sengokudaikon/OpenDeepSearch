@@ -1,6 +1,9 @@
 import argparse
 import asyncio
 import os
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "src"))
 
 import uvicorn
 from dotenv import load_dotenv
@@ -54,6 +57,24 @@ parser.add_argument(
     help="Maximum sources to process per iteration in pro mode (default: 10)",
 )
 parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
+
+# Add parser arguments for Serper and Searxng API keys
+parser.add_argument(
+    "--serper-api-key",
+    default=os.getenv("SERPER_API_KEY"),
+    help="API key for Serper search provider",
+)
+parser.add_argument(
+    "--searxng-instance-url",
+    default=os.getenv("SEARXNG_INSTANCE_URL"),
+    help="URL of the SearXNG instance",
+)
+parser.add_argument(
+    "--searxng-api-key",
+    default=os.getenv("SEARXNG_API_KEY"),
+    help="API key for SearXNG instance",
+)
+
 args = parser.parse_args()
 
 
@@ -64,7 +85,9 @@ search_tool = OpenDeepSearchTool(
     model_name=args.model_name,
     reranker=args.reranker,
     search_provider=args.search_provider,
-    serper_api_key=os.getenv("SERPER_API_KEY"),
+    serper_api_key=args.serper_api_key,
+    searxng_instance_url=args.searxng_instance_url,
+    searxng_api_key=args.searxng_api_key,
 )
 
 search_tool.setup()

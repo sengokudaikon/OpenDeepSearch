@@ -198,8 +198,11 @@ pydantic==2.10.6
     #   langsmith
     #   litellm
     #   openai
+    #   pydantic-settings
 pydantic-core==2.27.2
     # via pydantic
+pydantic-settings==2.8.1
+    # via opendeepersearch (pyproject.toml)
 pyee==12.1.1
     # via playwright
 pygments==2.19.1
@@ -215,6 +218,7 @@ python-dotenv==1.1.0
     #   opendeepersearch (pyproject.toml)
     #   crawl4ai
     #   litellm
+    #   pydantic-settings
     #   smolagents
 pytz==2025.2
     # via pandas

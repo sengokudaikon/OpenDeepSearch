@@ -50,7 +50,7 @@ class JinaReranker(BaseSemanticSearcher):
         }
 
         try:
-            response = requests.post(self.api_url, headers=self.headers, json=data)
+            response = requests.post(self.api_url, headers=self.headers, json=data, timeout=10)
             response.raise_for_status()
 
             embeddings_data = [item["embedding"] for item in response.json()["data"]]
