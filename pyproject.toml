@@ -10,7 +10,7 @@ authors = [
 dependencies = [
     "litellm>=1.61.20",
     "langchain>=0.3.19",
-    "crawl4ai @ git+https://github.com/sengokudaikon/crawl4ai.git@main",
+    "crawl4ai",
     "loguru",
     "torch",
     "smolagents>=1.9.2",
@@ -104,7 +104,7 @@ web-demo = [
 allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
-packages = ["src"]
+packages = ["src/opendeepersearch"]
 include = [
     "/assets",
     "/templates",
@@ -112,7 +112,7 @@ include = [
 
 [tool.hatch.build.targets.sdist]
 include = [
-    "src",
+    "src/opendeepersearch",
     "README.md",
     "LICENSE",
     "pyproject.toml",
