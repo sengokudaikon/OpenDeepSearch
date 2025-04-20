@@ -22,8 +22,27 @@ requires-python = ">=3.10"
 readme = "README.md"
 license = { text = "MIT" }
 
+# PyPI classifiers
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+]
+
+# Package URLs
+[project.urls]
+"Homepage" = "https://github.com/sengokudaikon/OpenDeepSearch"
+"Bug Tracker" = "https://github.com/sengokudaikon/OpenDeepSearch/issues"
+"Source Code" = "https://github.com/sengokudaikon/OpenDeepSearch"
+
 [build-system]
-requires = ["hatchling"]
+requires = ["hatchling>=1.13.0"]
 build-backend = "hatchling.build"
 
 
@@ -86,6 +105,30 @@ allow-direct-references = true
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]
+include = [
+    "/assets",
+    "/templates",
+]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src",
+    "README.md",
+    "LICENSE",
+    "pyproject.toml",
+    "assets",
+    "templates",
+]
+exclude = [
+    "**/__pycache__",
+    "**/.pytest_cache",
+    "**/.ruff_cache",
+    "**/.mypy_cache",
+]
+
+[project.scripts]
+ods-gradio-demo = "gradio_demo:main"
+ods-web-demo = "simple_web_demo:main"
 
 [tool.black]
 line-length = 120

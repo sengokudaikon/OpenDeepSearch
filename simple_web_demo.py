@@ -315,7 +315,10 @@ async def search(request: Request):
     return StreamingResponse(generate_response(), media_type="text/html")
 
 
-if __name__ == "__main__":
+def main():
     print("Starting OpenDeepSearch Web Demo Server...")
     print(f"Access the demo at http://localhost:{args.port}")
     uvicorn.run(app, host="0.0.0.0", port=args.port)
+
+if __name__ == "__main__":
+    main()

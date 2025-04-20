@@ -1,0 +1,18 @@
+include LICENSE
+include README.md
+include pyproject.toml
+include setup.py
+recursive-include assets *
+recursive-include templates *
+recursive-exclude * __pycache__
+recursive-exclude * *.py[cod]
+recursive-exclude * *.so
+recursive-exclude * .DS_Store
+recursive-exclude .git *
+recursive-exclude .github *
+recursive-exclude .pytest_cache *
+recursive-exclude .ruff_cache *
+recursive-exclude .mypy_cache *
+recursive-exclude dist *
+recursive-exclude build *
+recursive-exclude *.egg-info *

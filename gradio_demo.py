@@ -339,6 +339,10 @@ with gr.Blocks(theme=gr.themes.Soft()) as demo:
     txt.submit(lambda: "", None, txt)
 
 
-print(f"Launching Gradio server on http://127.0.0.1:{free_port}")
-demo.queue()
-demo.launch(server_name="127.0.0.1", server_port=free_port, share=True)
+def main():
+    print(f"Launching Gradio server on http://127.0.0.1:{free_port}")
+    demo.queue()
+    demo.launch(server_name="127.0.0.1", server_port=free_port, share=True)
+
+if __name__ == "__main__":
+    main()
